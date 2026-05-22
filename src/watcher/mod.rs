@@ -66,13 +66,27 @@ pub async fn push_currently_connected_devices(
 }
 
 /// Removes the device from the connected devices and shut it down
-pub async fn remove_device(id: u64) -> Result<(), RusbmuxError> {
-    CONNECTED_DEVICES
+pub async fn remove_device(id: u64) -> Result<Device, RusbmuxError> {
+    let (_, device) = CONNECTED_DEVICES
         .remove(&id)
-        .ok_or(RusbmuxError::DeviceNotFound(id))?
-        .1
-        .shutdown()
-        .await
+        .ok_or(RusbmuxError::DeviceNotFound(id))?;
+    device.shutdown().await?;
+
+    // if the removed device is a usb, and there's a network device connected, it would notify the
+    // apps (whoever doing a `Listen`) that it's connected
+    //
+    // this is to dedup and expose only one device (either usb or network, not both)
+    if device.as_usb().is_some()
+        && let Some(ndev) = CONNECTED_DEVICES.iter().find(|d| {
+            d.as_network()
+                .is_some_and(|_| d.serial_number() == device.serial_number())
+        })
+    {
+        let _ = get_hotplug_event_tx()
+            .await
+            .send(DeviceEvent::Attached { id: ndev.id() });
+    }
+    Ok(device)
 }
 
 pub static DEVICE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);

@@ -87,7 +87,25 @@ pub async fn send_currently_connected(
     writer: &mut impl AsyncWriting,
     tag: u32,
 ) -> Result<(), RusbmuxError> {
-    for device in &*CONNECTED_DEVICES {
+    // TODO: put it in a function
+    for device in CONNECTED_DEVICES
+        .iter()
+        .filter(|dev| match dev.as_network() {
+            // it's a network device and the device serial_number is also available in other device
+            // but they are not the same device
+            //
+            // so if:
+            //  [Network(serial_number = "67"), Usb(serial_number = "67")] => skip Network
+            Some(ndev)
+                if CONNECTED_DEVICES.iter().any(|dev| {
+                    dev.serial_number() == ndev.serial_number && dev.id() != ndev.core.id
+                }) =>
+            {
+                false
+            }
+            Some(_) | None => true,
+        })
+    {
         let device_plist = device.create_device_attached()?;
 
         let device_xml = plist_macro::plist_value_to_xml_bytes(&device_plist);

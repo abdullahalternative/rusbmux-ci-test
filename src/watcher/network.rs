@@ -10,7 +10,12 @@ use tracing::{debug, error, info, warn};
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as Base64};
 
-use crate::{device::Device, error::RusbmuxError, handler::CONFIG_PATH, watcher::DeviceWatchEvent};
+use crate::{
+    device::Device,
+    error::RusbmuxError,
+    handler::CONFIG_PATH,
+    watcher::{DeviceEvent, DeviceWatchEvent, get_hotplug_event_tx},
+};
 
 use super::CONNECTED_DEVICES;
 
@@ -35,9 +40,22 @@ pub async fn watch_network_daemon() {
                     continue;
                 };
 
-                CONNECTED_DEVICES.retain(|_, dev| {
-                    dev.as_network()
-                        .is_none_or(|ndev| ndev.mac_address == mac_address)
+                let hotplug = get_hotplug_event_tx().await;
+                CONNECTED_DEVICES.retain(|_, device| {
+                    let is_target_device = device
+                        .as_network()
+                        .is_none_or(|ndev| ndev.mac_address == mac_address);
+
+                    if is_target_device
+                        && !CONNECTED_DEVICES.iter().any(|dev| {
+                            dev.as_usb()
+                                .is_some_and(|_| dev.serial_number() == device.serial_number())
+                        })
+                    {
+                        let _ = hotplug.send(DeviceEvent::Detached { id: device.id() });
+                    }
+
+                    is_target_device
                 });
             }
             _ => {}
@@ -220,9 +238,22 @@ async fn network_device_add(rs: Box<ResolvedService>) {
     let id = device.id();
     CONNECTED_DEVICES.insert(id, device);
 
-    let _ = super::get_hotplug_event_tx()
-        .await
-        .send(super::DeviceEvent::Attached { id });
+    // prefer usb devices over network devices for the same udid
+    //
+    // skip hotplug notifications when the device is already connected via usb
+    //
+    // it would get notified only if the usb is disconnected
+    let has_usb_connection = CONNECTED_DEVICES.iter().any(|device| {
+        device
+            .as_usb()
+            .is_some_and(|_| device.serial_number() == rd.udid)
+    });
+
+    if !has_usb_connection {
+        let _ = super::get_hotplug_event_tx()
+            .await
+            .send(super::DeviceEvent::Attached { id });
+    }
 }
 
 fn find_udid_from_txt(identifier: &[u8], auth_tags: &[&[u8]]) -> Option<String> {

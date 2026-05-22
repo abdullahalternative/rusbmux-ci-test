@@ -39,8 +39,18 @@ pub async fn watch_usb_daemon() {
                 let id = super::take_new_id();
                 devices_id_map.insert(device_info.id(), id);
 
-                match Device::new_usb(device_info, id).await {
-                    Ok(device) => CONNECTED_DEVICES.insert(id, device),
+                let device = Device::new_usb(device_info, id).await;
+                match device {
+                    Ok(device) => {
+                        if let Some(ndev) = CONNECTED_DEVICES.iter().find(|dev| {
+                            dev.as_network()
+                                .is_some_and(|_| dev.serial_number() == device.serial_number())
+                        }) {
+                            let _ = hotplug_event_tx.send(DeviceEvent::Detached { id: ndev.id() });
+                        }
+
+                        CONNECTED_DEVICES.insert(id, device);
+                    }
                     Err(e) => {
                         error!(e = ?e, "Failed to create a new device");
                         continue;
