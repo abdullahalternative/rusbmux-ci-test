@@ -1,7 +1,9 @@
+use std::path::Path;
+
 use crate::{
     AsyncWriting,
     error::RusbmuxError,
-    handler::CONFIG_PATH,
+    handler::{CONFIG_PATH, ResultCode, send_result},
     parser::usbmux::{UsbMuxMsgType, UsbMuxPacket, UsbMuxVersion},
 };
 use tokio::io::AsyncWriteExt;
@@ -14,13 +16,27 @@ pub async fn handle_read_buid(
     let tag = usbmux_packet.header.tag;
 
     let path = format!("{CONFIG_PATH}/lockdown/SystemConfiguration.plist");
+    let path = Path::new(&path);
 
-    trace!(tag, "Reading system configuration plist");
+    trace!(tag, "Reading SystemConfiguration.plist");
 
-    let system_config = plist::from_file::<_, plist::Value>(&path).inspect_err(
-        |e| error!( tag, path, err = ?e, "Failed to read SystemConfiguration.plist"),
-    )?;
+    if !path.exists() {
+        let id = uuid::Uuid::new_v4().to_string().to_uppercase();
+        debug!(tag, "SystemConfiguration.plist is missing, creating one");
 
+        let sbuid = plist_macro::plist_value_to_xml_bytes(&plist_macro::plist!({
+            "SystemBUID": id
+        }));
+
+        if let Err(e) = tokio::fs::write(&path, sbuid).await {
+            error!(tag, err = ?e, "Failed to write a new SystemConfiguration.plist");
+            let _ = send_result(writer, ResultCode::BadDeviceOrNoSuchFile, tag).await;
+            return Ok(());
+        }
+    }
+
+    let system_config = plist::from_file::<_, plist::Value>(&path)
+        .inspect_err(|e| error!( tag,  err = ?e, "Failed to read SystemConfiguration.plist"))?;
     let buid = system_config
         .as_dictionary()
         .ok_or(RusbmuxError::UnexpectedPacket(
