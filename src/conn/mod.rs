@@ -3,7 +3,7 @@ use std::sync::Arc;
 pub mod network;
 pub mod usb;
 
-use crate::{device::ConectionType, error::RusbmuxError};
+use crate::{device::ConnectionType, error::RusbmuxError};
 pub use network::NetworkDeviceConn;
 pub use usb::UsbDeviceConn;
 
@@ -27,10 +27,10 @@ pub enum DeviceConn {
 // }
 
 impl DeviceConn {
-    pub const fn connection_type(&self) -> ConectionType {
+    pub const fn connection_type(&self) -> ConnectionType {
         match self {
-            Self::Usb(_) => ConectionType::Usb,
-            Self::Network(_) => ConectionType::Network,
+            Self::Usb(_) => ConnectionType::Usb,
+            Self::Network(_) => ConnectionType::Network,
         }
     }
     pub const fn as_network(&mut self) -> Option<&mut NetworkDeviceConn> {

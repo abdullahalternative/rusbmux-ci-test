@@ -11,7 +11,7 @@ mod network;
 mod usb;
 
 use crate::{
-    device::{ConectionType, Device},
+    device::{ConnectionType, Device},
     error::RusbmuxError,
 };
 pub use network::watch_network;
@@ -87,7 +87,7 @@ pub async fn remove_device(id: u64) -> Result<Device, RusbmuxError> {
     // prefering usb over network)
     match device.connection_type() {
         // the removed device is a usb, and there's a network device with the same serial number
-        ConectionType::Usb
+        ConnectionType::Usb
             if let Some(ndev) = CONNECTED_DEVICES.iter().find(|dev| {
                 dev.as_network()
                     .is_some_and(|_| dev.serial_number() == device.serial_number())
@@ -101,14 +101,14 @@ pub async fn remove_device(id: u64) -> Result<Device, RusbmuxError> {
         // the network device is also connected as usb, so skip sending the detached event
         //
         // because the network device is already detached from the listener (dedup purposes)
-        ConectionType::Network
+        ConnectionType::Network
             if CONNECTED_DEVICES.iter().any(|dev| {
                 dev.as_usb()
                     .is_some_and(|_| dev.serial_number() == device.serial_number())
             }) => {}
 
         // the usb disconnection event would be sent from the usb watcher
-        ConectionType::Usb => {}
+        ConnectionType::Usb => {}
 
         // the network device is not also connected as usb
         //
@@ -116,7 +116,7 @@ pub async fn remove_device(id: u64) -> Result<Device, RusbmuxError> {
         // removal, so this will be fired if we don't get a heartbeat response from the device
         // if it did broadcast a removal, then function will return with device not found, because
         // the network watcher already removed it
-        ConectionType::Network => {
+        ConnectionType::Network => {
             let _ = get_hotplug_event_tx()
                 .await
                 .send(DeviceEvent::Detached { id: device.id() });

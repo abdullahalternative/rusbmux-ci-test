@@ -16,17 +16,17 @@ pub enum Device {
 }
 
 #[derive(Debug)]
-pub enum ConectionType {
+pub enum ConnectionType {
     Usb,
     Network,
 }
 
 impl Device {
     #[must_use]
-    pub const fn connection_type(&self) -> ConectionType {
+    pub const fn connection_type(&self) -> ConnectionType {
         match self {
-            Self::Usb(_) => ConectionType::Usb,
-            Self::Network(_) => ConectionType::Network,
+            Self::Usb(_) => ConnectionType::Usb,
+            Self::Network(_) => ConnectionType::Network,
         }
     }
 
