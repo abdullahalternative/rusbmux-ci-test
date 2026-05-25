@@ -69,6 +69,29 @@ cargo install rusbmux
 paru -S rusbmux-git
 ```
 
+## Running
+
+### Systemd (AUR install or manual setup)
+
+If installing manually, copy the service file from the repository into systemd first:
+
+```fish
+sudo cp systemd/rusbmux.service /usr/lib/systemd/system/rusbmux.service
+sudo systemctl daemon-reload
+```
+
+Then enable and start it:
+
+```fish
+sudo systemctl enable --now rusbmux
+```
+
+### Direct execution
+
+```fish
+sudo rusbmux
+```
+
 ## So what's worse (for now)?
 
 Let’s be honest — this isn’t strictly better in every way _yet_.

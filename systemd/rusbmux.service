@@ -1,0 +1,15 @@
+[Unit]
+Description=rusbmux usbmuxd-compatible daemon
+Documentation=https://github.com/abdullah-albanna/rusbmux
+After=network.target
+Conflicts=usbmuxd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rusbmux
+Restart=on-failure
+RestartSec=2s
+StateDirectory=lockdown
+
+[Install]
+WantedBy=multi-user.target
