@@ -53,6 +53,22 @@ It gives you control over how the protocol runs — instead of forcing a single 
 
 - Can be embedded
 
+## Installation
+
+**rusbmux** can be installed directly from Cargo or through the AUR on Arch Linux.
+
+### Cargo
+
+```fish
+cargo install rusbmux
+```
+
+### Arch Linux (AUR)
+
+```fish
+paru -S rusbmux-git
+```
+
 ## So what's worse (for now)?
 
 Let’s be honest — this isn’t strictly better in every way _yet_.
