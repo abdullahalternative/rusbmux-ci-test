@@ -13,7 +13,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as Base64};
 use crate::{
     device::Device,
     error::RusbmuxError,
-    handler::CONFIG_PATH,
+    handler::LOCKDOWN_PATH,
     watcher::{DeviceEvent, DeviceWatchEvent, get_hotplug_event_tx},
 };
 
@@ -335,7 +335,7 @@ fn match_txt(identifier: &[u8], decoded_tags: &[[u8; 8]]) -> Option<String> {
 
 /// gets all the valid pairing files along side it's file stem (udid)
 fn get_saved_pairing_files() -> Vec<(String, PairingFile)> {
-    Path::new(&format!("{CONFIG_PATH}/lockdown/"))
+    Path::new(LOCKDOWN_PATH)
         .read_dir()
         .unwrap()
         .flatten()

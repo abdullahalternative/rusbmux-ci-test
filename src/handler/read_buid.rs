@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{
     AsyncWriting,
     error::RusbmuxError,
-    handler::{CONFIG_PATH, ResultCode, send_result},
+    handler::{LOCKDOWN_PATH, ResultCode, send_result},
     parser::usbmux::{UsbMuxMsgType, UsbMuxPacket, UsbMuxVersion},
 };
 use tokio::io::AsyncWriteExt;
@@ -15,7 +15,7 @@ pub async fn handle_read_buid(
 ) -> Result<(), RusbmuxError> {
     let tag = usbmux_packet.header.tag;
 
-    let path = format!("{CONFIG_PATH}/lockdown/SystemConfiguration.plist");
+    let path = format!("{LOCKDOWN_PATH}/SystemConfiguration.plist");
     let path = Path::new(&path);
 
     trace!(tag, "Reading SystemConfiguration.plist");
