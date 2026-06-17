@@ -278,12 +278,12 @@ impl AnyDeviceInfo {
             #[cfg(feature = "nusb")]
             #[allow(unused_variables)]
             Self::Nusb(info) => {
-                #[cfg(not(target_os = "windows"))]
+                #[cfg(not(windows))]
                 {
                     info.busnum()
                 }
 
-                #[cfg(target_os = "windows")]
+                #[cfg(any(windows, target_os = "macos"))]
                 {
                     0
                 }
