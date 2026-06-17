@@ -1,4 +1,4 @@
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 #[cfg(target_family = "unix")]
 type Listener = tokio::net::UnixListener;

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+#[cfg(feature = "nusb")]
 pub(crate) fn nusb_speed_to_number(speed: nusb::Speed) -> u64 {
     match speed {
         nusb::Speed::Low => 1_500_000,
@@ -11,6 +12,7 @@ pub(crate) fn nusb_speed_to_number(speed: nusb::Speed) -> u64 {
     }
 }
 
+#[cfg(feature = "rusb")]
 pub(crate) fn rusb_speed_to_number(speed: rusb::Speed) -> u64 {
     match speed {
         rusb::Speed::Low => 1_500_000,

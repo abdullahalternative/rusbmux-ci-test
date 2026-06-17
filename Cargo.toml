@@ -20,8 +20,8 @@ dashmap = "6.1"
 bytes = "1"
 
 # https://github.com/kevinmehall/nusb/pull/181
-nusb = { version = "^0.2.2", features = ["tokio"] }
-rusb = "0.9"
+nusb = { version = "^0.2.2", features = ["tokio"], optional = true }
+rusb = { version = "0.9", optional = true }
 
 tokio = { version = "1", features = ["io-util", "fs", "sync", "macros"] }
 tokio-util = "0.7"
@@ -61,7 +61,7 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [features]
-default = ["bin"]
+default = ["bin", "nusb"]
 bin = [
   "dep:rustix",
   "tokio/net",
@@ -69,6 +69,9 @@ bin = [
   "tokio/rt-multi-thread",
   "dep:tracing-subscriber",
 ]
+nusb = ["dep:nusb"]
+rusb = ["dep:rusb"]
+rusb-vendored = ["dep:rusb", "rusb/vendored"]
 
 [[bin]]
 name = "rusbmux"

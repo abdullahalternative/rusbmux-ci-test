@@ -1,1 +1,5 @@
 /target
+/windows/rusbmux-usb-win-driver/target
+
+# inno setup output
+/windows/dist/

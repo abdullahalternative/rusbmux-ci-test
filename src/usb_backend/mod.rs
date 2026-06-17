@@ -9,14 +9,29 @@ use futures_lite::Stream;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::{AsyncReading, AsyncWriting, error::RusbmuxError, parser::device_mux::UsbDevicePacket};
+
+#[cfg(feature = "nusb")]
 mod nusb;
+#[cfg(feature = "rusb")]
 mod rusb;
 
-#[cfg(target_os = "windows")]
-pub const DEFAULT_BACKEND: rusb::RusbBackend = rusb::RusbBackend;
-
-#[cfg(not(target_os = "windows"))]
+// use nusb as the default target if:
+//  both nusb and rusb are enabled on a Unix target or
+//  only the nusb feature is enabled
+#[cfg(any(
+    all(feature = "nusb", feature = "rusb", unix),
+    all(feature = "nusb", not(feature = "rusb"))
+))]
 pub const DEFAULT_BACKEND: nusb::NusbBackend = nusb::NusbBackend;
+
+// use rusb as the default target if:
+//  both nusb and rusb are enabled on a Windows target or
+//  only the rusb feature is enabled
+#[cfg(any(
+    all(feature = "nusb", feature = "rusb", windows),
+    all(feature = "rusb", not(feature = "nusb"))
+))]
+pub const DEFAULT_BACKEND: rusb::RusbBackend = rusb::RusbBackend;
 
 pub type BoxStream<T> = Pin<Box<dyn Stream<Item = T> + Send>>;
 
@@ -42,14 +57,18 @@ pub struct Endpoint {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum AnyDeviceInfo {
+    #[cfg(feature = "nusb")]
     Nusb(::nusb::DeviceInfo),
+    #[cfg(feature = "rusb")]
     Rusb(::rusb::Device<::rusb::GlobalContext>),
 }
 
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum AnyDeviceHandle {
+    #[cfg(feature = "nusb")]
     Nusb(::nusb::Device),
+    #[cfg(feature = "rusb")]
     Rusb {
         handle: Arc<::rusb::DeviceHandle<::rusb::GlobalContext>>,
         end_in: u8,
@@ -60,20 +79,26 @@ pub enum AnyDeviceHandle {
 
 #[non_exhaustive]
 pub enum AnyEndpointReader {
+    #[cfg(feature = "nusb")]
     Nusb(::nusb::io::EndpointRead<::nusb::transfer::Bulk>),
+    #[cfg(feature = "rusb")]
     Rusb(rusb::RusbAsyncReader),
 }
 
 #[non_exhaustive]
 pub enum AnyEndpointWriter {
+    #[cfg(feature = "nusb")]
     Nusb(::nusb::io::EndpointWrite<::nusb::transfer::Bulk>),
+    #[cfg(feature = "rusb")]
     Rusb(rusb::RusbAsyncWriter),
 }
 
 impl fmt::Debug for AnyEndpointReader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(_) => f.debug_tuple("NusbReader").field(&"...").finish(),
+            #[cfg(feature = "rusb")]
             Self::Rusb(_) => f.debug_tuple("RusbReader").field(&"...").finish(),
         }
     }
@@ -82,7 +107,9 @@ impl fmt::Debug for AnyEndpointReader {
 impl fmt::Debug for AnyEndpointWriter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(_) => f.debug_tuple("NusbWriter").field(&"...").finish(),
+            #[cfg(feature = "rusb")]
             Self::Rusb(_) => f.debug_tuple("RusbWriter").field(&"...").finish(),
         }
     }
@@ -95,7 +122,9 @@ impl AsyncRead for AnyEndpointReader {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
         match self.get_mut() {
+            #[cfg(feature = "nusb")]
             Self::Nusb(r) => Pin::new(r).poll_read(cx, buf),
+            #[cfg(feature = "rusb")]
             Self::Rusb(r) => Pin::new(r).poll_read(cx, buf),
         }
     }
@@ -108,7 +137,9 @@ impl AsyncWrite for AnyEndpointWriter {
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
         match self.get_mut() {
+            #[cfg(feature = "nusb")]
             Self::Nusb(w) => Pin::new(w).poll_write(cx, buf),
+            #[cfg(feature = "rusb")]
             Self::Rusb(w) => Pin::new(w).poll_write(cx, buf),
         }
     }
@@ -118,7 +149,9 @@ impl AsyncWrite for AnyEndpointWriter {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
         match self.get_mut() {
+            #[cfg(feature = "nusb")]
             Self::Nusb(w) => Pin::new(w).poll_flush(cx),
+            #[cfg(feature = "rusb")]
             Self::Rusb(w) => Pin::new(w).poll_flush(cx),
         }
     }
@@ -128,7 +161,9 @@ impl AsyncWrite for AnyEndpointWriter {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
         match self.get_mut() {
+            #[cfg(feature = "nusb")]
             Self::Nusb(w) => Pin::new(w).poll_shutdown(cx),
+            #[cfg(feature = "rusb")]
             Self::Rusb(w) => Pin::new(w).poll_shutdown(cx),
         }
     }
@@ -137,7 +172,9 @@ impl AsyncWrite for AnyEndpointWriter {
 impl UsbAsyncWriteEndpoint for AnyEndpointWriter {
     fn submit_end(&mut self) {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(w) => w.submit_end(),
+            #[cfg(feature = "rusb")]
             Self::Rusb(w) => {
                 let _ = w.submit_end();
             }
@@ -148,14 +185,18 @@ impl UsbAsyncWriteEndpoint for AnyEndpointWriter {
 impl AnyDeviceInfo {
     pub fn vendor_id(&self) -> u16 {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => info.vendor_id(),
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => dev.device_descriptor().expect("shouldn't fail").vendor_id(),
         }
     }
 
     pub fn product_id(&self) -> u16 {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => info.product_id(),
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => dev
                 .device_descriptor()
                 .expect("shouldn't fail")
@@ -165,7 +206,9 @@ impl AnyDeviceInfo {
 
     pub fn serial_number(&self) -> Option<Cow<'_, str>> {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => info.serial_number().map(crate::utils::get_serial_number),
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => {
                 let desc = dev.device_descriptor().expect("shouldn't fail");
                 let serial_number = rusb::get_serial_number(dev, &desc);
@@ -179,7 +222,9 @@ impl AnyDeviceInfo {
 
     pub fn speed(&self) -> Option<u64> {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => info.speed().map(crate::utils::nusb_speed_to_number),
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => {
                 let speed = dev.speed();
 
@@ -194,6 +239,8 @@ impl AnyDeviceInfo {
 
     pub fn location_id(&self) -> u32 {
         match self {
+            #[cfg(feature = "nusb")]
+            #[allow(unused_variables)]
             Self::Nusb(info) => {
                 #[cfg(any(target_os = "linux", target_os = "android"))]
                 {
@@ -211,10 +258,11 @@ impl AnyDeviceInfo {
                 }
             }
 
-            Self::Rusb(dev) => {
+            #[cfg(feature = "rusb")]
+            Self::Rusb(_dev) => {
                 #[cfg(any(target_os = "linux", target_os = "android"))]
                 {
-                    (dev.bus_number() as u32) << 16 | dev.address() as u32
+                    (_dev.bus_number() as u32) << 16 | _dev.address() as u32
                 }
 
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -227,6 +275,8 @@ impl AnyDeviceInfo {
 
     pub fn bus_number(&self) -> u8 {
         match self {
+            #[cfg(feature = "nusb")]
+            #[allow(unused_variables)]
             Self::Nusb(info) => {
                 #[cfg(not(target_os = "windows"))]
                 {
@@ -238,32 +288,39 @@ impl AnyDeviceInfo {
                     0
                 }
             }
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => dev.bus_number(),
         }
     }
 
     pub fn device_address(&self) -> u8 {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => info.device_address(),
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => dev.address(),
         }
     }
 
     pub fn opaque_id(&self) -> u64 {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => {
                 use std::hash::{Hash, Hasher};
                 let mut hasher = std::hash::DefaultHasher::new();
                 info.id().hash(&mut hasher);
                 hasher.finish()
             }
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => rusb::opaque_id(dev),
         }
     }
 
     pub async fn open(&self) -> Result<AnyDeviceHandle, RusbmuxError> {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(info) => Ok(AnyDeviceHandle::Nusb(::nusb::DeviceInfo::open(info).await?)),
+            #[cfg(feature = "rusb")]
             Self::Rusb(dev) => {
                 let dev_handle = Arc::new(dev.open()?);
 
@@ -284,6 +341,7 @@ impl AnyDeviceInfo {
 impl AnyDeviceHandle {
     pub async fn endpoint(&self) -> Result<(AnyEndpointReader, AnyEndpointWriter), RusbmuxError> {
         match self {
+            #[cfg(feature = "nusb")]
             Self::Nusb(dev) => {
                 let (reader, writer) = nusb::device_endpoints(dev).await?;
                 Ok((
@@ -291,6 +349,7 @@ impl AnyDeviceHandle {
                     AnyEndpointWriter::Nusb(writer),
                 ))
             }
+            #[cfg(feature = "rusb")]
             Self::Rusb {
                 handle,
                 end_in,

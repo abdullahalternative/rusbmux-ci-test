@@ -1,0 +1,1515 @@
+; installs libusb-win32 drivers for Apple devices
+[Strings]
+VendorName = "Apple, Inc."
+SourceName = "Apple Device Install Disk"
+DeviceGUID = "{B23E0DDC-E3F4-46A0-9D55-B60171DB66E4}"
+; values are taken from https://theapplewiki.com/wiki/USB_Product_IDs and https://devicehunt.com/view/type/usb/vendor/05AC/
+DeviceName_1290 = "Apple iPhone USB Device"
+DeviceName_1291 = "Apple iPod touch (1st gen) USB Device"
+DeviceName_1292 = "Apple iPhone 3G USB Device"
+DeviceName_1293 = "Apple iPod touch (2nd gen) USB Device"
+DeviceName_1294 = "Apple iPhone 3GS USB Device"
+DeviceName_1295 = "Apple USB Device"
+DeviceName_1296 = "Apple iPod touch (3rd gen) USB Device"
+DeviceName_1297 = "Apple iPhone 4 USB Device"
+DeviceName_1298 = "Apple USB Device"
+DeviceName_1299 = "Apple iPod touch (3rd gen) USB Device"
+DeviceName_129A = "Apple iPad USB Device"
+DeviceName_129B = "Apple USB Device"
+DeviceName_129C = "Apple iPhone 4 (CDMA) USB Device"
+DeviceName_129D = "Apple iPhone USB Device"
+DeviceName_129E = "Apple iPod touch (4th gen) USB Device"
+DeviceName_129F = "Apple iPad (2nd gen) USB Device"
+DeviceName_12A0 = "Apple iPhone 4S USB Device"
+DeviceName_12A1 = "Apple iPhone USB Device"
+DeviceName_12A2 = "Apple iPad (2nd gen) (3G; 64GB) USB Device"
+DeviceName_12A3 = "Apple iPad (2nd gen (CDMA) USB Device"
+DeviceName_12A4 = "Apple iPad (3rd gen) (WiFi) USB Device"
+DeviceName_12A5 = "Apple iPad (3rd gen) (CDMA) USB Device"
+DeviceName_12A6 = "Apple iPad (3rd gen) (3G; 64GB) USB Device"
+DeviceName_12A7 = "Apple TV USB Device"
+DeviceName_12A8 = "Apple iPhone 5 and later USB Device"
+DeviceName_12A9 = "Apple iPad (4th or 2nd gen) USB Device"
+DeviceName_12AA = "Apple iPod touch (5th/6th/7th gen) USB Device"
+DeviceName_12AB = "Apple iPad (newer models) USB Device"
+DeviceName_12AC = "Apple TV Restore Mode or iPhone USB Device"
+DeviceName_12AD = "Apple Lightning Digital AV Adapter USB Device"
+DeviceName_12AE = "Apple Lightning VGA Adapter USB Device"
+DeviceName_12AF = "Apple Watch USB Device"
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = "Apple Devices"
+ClassGuid   = {88BAE032-5A81-49f0-BC3D-A4FF138216D6}
+Provider    = "rusbmux"
+CatalogFile = rusbmux_libusb0.cat
+DriverVer   = 01/09/2026, 1.4.0.2
+
+[Manufacturer]
+%VendorName% = Devices, NT, NTAMD64, NTARM64
+
+;--------------------------------------------------------------------------
+; libusb-win32 files
+;--------------------------------------------------------------------------
+
+[SourceDisksNames]
+1 = %SourceName%
+
+[SourceDisksFiles.x86]
+libusb0.sys     = 1,x86
+libusb0_x86.dll = 1,x86
+
+[SourceDisksFiles.amd64]
+libusb0.sys     = 1,amd64
+libusb0.dll     = 1,amd64
+libusb0_x86.dll = 1,x86
+
+[SourceDisksFiles.arm64]
+libusb0.sys     = 1,arm64
+libusb0.dll     = 1,arm64
+
+[DestinationDirs]
+libusb_files_sys       = 10,system32\drivers
+libusb_files_dll       = 10,system32
+libusb_files_dll_wow64 = 10,syswow64
+libusb_files_dll_x86   = 10,system32
+
+[libusb_files_sys]
+libusb0.sys
+
+[libusb_files_dll]
+libusb0.dll
+
+[libusb_files_dll_x86]
+libusb0.dll, libusb0_x86.dll
+
+[libusb_files_dll_wow64]
+libusb0.dll, libusb0_x86.dll
+
+; (Optional) the usb configuration value to select when this device
+; is started.  If this key does not exist the first config is selected.
+;HKR,,InitialConfigValue,0x00010001,<your config value>
+
+;--------------------------------------------------------------------------
+; libusb-win32 service
+;--------------------------------------------------------------------------
+
+[libusb_add_service]
+DisplayName   = "libusb-win32 - Kernel Driver 01/09/2026 1.4.0.2"
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 0
+ServiceBinary = %12%\libusb0.sys
+
+;--------------------------------------------------------------------------
+; libusb-win32 devices
+;--------------------------------------------------------------------------
+
+; Hardware IDs in a 'Devices' section can be installed by libusb-win32
+; using usb_install_driver_np(), usb_install_driver_np_rundll(), or the
+; inf-wizard utility.
+;
+
+;--------------------------------------------------------------------------
+; libusb-win32 device driver
+; 
+; handles per pid device name and friendly name 
+;--------------------------------------------------------------------------
+
+[LIBUSB_WIN32_DEV_1290.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1290.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1290.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1290
+
+; -----
+
+[LIBUSB_WIN32_DEV_1291.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1291.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1291.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1291
+
+; -----
+
+[LIBUSB_WIN32_DEV_1292.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1292.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1292.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1292
+
+; -----
+
+[LIBUSB_WIN32_DEV_1293.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1293.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1293.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1293
+
+; -----
+
+[LIBUSB_WIN32_DEV_1294.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1294.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1294.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1294
+
+; -----
+
+[LIBUSB_WIN32_DEV_1295.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1295.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1295.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1295
+
+; -----
+
+[LIBUSB_WIN32_DEV_1296.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1296.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1296.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1296
+
+; -----
+
+[LIBUSB_WIN32_DEV_1297.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1297.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1297.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1297
+
+; -----
+
+[LIBUSB_WIN32_DEV_1298.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1298.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1298.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1298
+
+; -----
+
+[LIBUSB_WIN32_DEV_1299.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_1299.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1299.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1299
+
+; -----
+
+[LIBUSB_WIN32_DEV_129A.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_129A.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129A.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129A
+
+; -----
+
+[LIBUSB_WIN32_DEV_129B.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_129B.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129B.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129B
+
+; -----
+
+[LIBUSB_WIN32_DEV_129C.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_129C.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129C.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129C
+
+; -----
+
+[LIBUSB_WIN32_DEV_129D.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_129D.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129D.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129D
+
+; -----
+
+[LIBUSB_WIN32_DEV_129E.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_129E.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129E.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129E
+
+; -----
+
+[LIBUSB_WIN32_DEV_129F.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_129F.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129F.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129F
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A0.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A0.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A0.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A0
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A1.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A1.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A1.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A1
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A2.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A2.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A2.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A2
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A3.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A3.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A3.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A3
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A4.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A4.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A4.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A4
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A5.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A5.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A5.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A5
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A6.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A6.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A6.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A6
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A7.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A7.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A7.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A7
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A8.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A8.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A8.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A8
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A9.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12A9.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A9.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A9
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AA.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12AA.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AA.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AA
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AB.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12AB.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AB.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AB
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AC.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12AC.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AC.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AC
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AD.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12AD.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AD.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AD
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AE.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12AE.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AE.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AE
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AF.NT]
+CopyFiles = libusb_files_sys, libusb_files_dll_x86
+
+[LIBUSB_WIN32_DEV_12AF.NT.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AF.NT.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AF
+
+; ----------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------
+
+[LIBUSB_WIN32_DEV_1290.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1290.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1290.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1290
+
+; -----
+
+[LIBUSB_WIN32_DEV_1291.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1291.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1291.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1291
+
+; -----
+
+[LIBUSB_WIN32_DEV_1292.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1292.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1292.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1292
+
+; -----
+
+[LIBUSB_WIN32_DEV_1293.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1293.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1293.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1293
+
+; -----
+
+[LIBUSB_WIN32_DEV_1294.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1294.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1294.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1294
+
+; -----
+
+[LIBUSB_WIN32_DEV_1295.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1295.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1295.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1295
+
+; -----
+
+[LIBUSB_WIN32_DEV_1296.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1296.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1296.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1296
+
+; -----
+
+[LIBUSB_WIN32_DEV_1297.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1297.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1297.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1297
+
+; -----
+
+[LIBUSB_WIN32_DEV_1298.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1298.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1298.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1298
+
+; -----
+
+[LIBUSB_WIN32_DEV_1299.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_1299.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1299.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1299
+
+; -----
+
+[LIBUSB_WIN32_DEV_129A.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_129A.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129A.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129A
+
+; -----
+
+[LIBUSB_WIN32_DEV_129B.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_129B.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129B.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129B
+
+; -----
+
+[LIBUSB_WIN32_DEV_129C.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_129C.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129C.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129C
+
+; -----
+
+[LIBUSB_WIN32_DEV_129D.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_129D.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129D.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129D
+
+; -----
+
+[LIBUSB_WIN32_DEV_129E.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_129E.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129E.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129E
+
+; -----
+
+[LIBUSB_WIN32_DEV_129F.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_129F.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129F.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129F
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A0.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A0.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A0.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A0
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A1.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A1.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A1.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A1
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A2.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A2.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A2.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A2
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A3.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A3.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A3.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A3
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A4.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A4.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A4.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A4
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A5.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A5.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A5.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A5
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A6.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A6.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A6.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A6
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A7.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A7.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A7.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A7
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A8.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A8.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A8.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A8
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A9.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12A9.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A9.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A9
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AA.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12AA.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AA.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AA
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AB.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12AB.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AB.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AB
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AC.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12AC.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AC.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AC
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AD.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12AD.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AD.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AD
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AE.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12AE.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AE.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AE
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AF.NTAMD64]
+CopyFiles = libusb_files_sys, libusb_files_dll, libusb_files_dll_wow64
+
+[LIBUSB_WIN32_DEV_12AF.NTAMD64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AF.NTAMD64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AF
+
+; ----------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------
+
+[LIBUSB_WIN32_DEV_1290.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1290.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1290.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1290
+
+; -----
+
+[LIBUSB_WIN32_DEV_1291.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1291.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1291.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1291
+
+; -----
+
+[LIBUSB_WIN32_DEV_1292.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1292.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1292.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1292
+
+; -----
+
+[LIBUSB_WIN32_DEV_1293.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1293.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1293.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1293
+
+; -----
+
+[LIBUSB_WIN32_DEV_1294.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1294.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1294.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1294
+
+; -----
+
+[LIBUSB_WIN32_DEV_1295.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1295.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1295.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1295
+
+; -----
+
+[LIBUSB_WIN32_DEV_1296.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1296.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1296.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1296
+
+; -----
+
+[LIBUSB_WIN32_DEV_1297.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1297.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1297.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1297
+
+; -----
+
+[LIBUSB_WIN32_DEV_1298.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1298.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1298.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1298
+
+; -----
+
+[LIBUSB_WIN32_DEV_1299.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_1299.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_1299.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_1299
+
+; -----
+
+[LIBUSB_WIN32_DEV_129A.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_129A.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129A.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129A
+
+; -----
+
+[LIBUSB_WIN32_DEV_129B.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_129B.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129B.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129B
+
+; -----
+
+[LIBUSB_WIN32_DEV_129C.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_129C.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129C.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129C
+
+; -----
+
+[LIBUSB_WIN32_DEV_129D.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_129D.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129D.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129D
+
+; -----
+
+[LIBUSB_WIN32_DEV_129E.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_129E.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129E.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129E
+
+; -----
+
+[LIBUSB_WIN32_DEV_129F.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_129F.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_129F.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_129F
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A0.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A0.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A0.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A0
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A1.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A1.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A1.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A1
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A2.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A2.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A2.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A2
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A3.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A3.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A3.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A3
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A4.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A4.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A4.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A4
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A5.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A5.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A5.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A5
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A6.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A6.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A6.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A6
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A7.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A7.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A7.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A7
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A8.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A8.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A8.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A8
+
+; -----
+
+[LIBUSB_WIN32_DEV_12A9.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12A9.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12A9.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12A9
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AA.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12AA.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AA.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AA
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AB.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12AB.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AB.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AB
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AC.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12AC.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AC.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AC
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AD.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12AD.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AD.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AD
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AE.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12AE.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AE.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AE
+
+; -----
+
+[LIBUSB_WIN32_DEV_12AF.NTARM64]
+CopyFiles = libusb_files_sys, libusb_files_dll
+
+[LIBUSB_WIN32_DEV_12AF.NTARM64.Services]
+AddService = libusb0, 0x00000002, libusb_add_service
+
+[LIBUSB_WIN32_DEV_12AF.NTARM64.HW]
+DelReg = libusb_del_reg_hw
+AddReg = libusb_add_reg_hw, libusb_add_reg_friendlyname_12AF
+
+; -----
+
+[libusb_del_reg_hw]
+HKR,,LowerFilters
+HKR,,UpperFilters
+
+; libusb-win32 device properties
+[libusb_add_reg_hw]
+HKR,,SurpriseRemovalOK,0x00010001,1
+HKR,,DeviceInterfaceGUIDs,0x00010000,%DeviceGUID%
+
+; Friendly name per device PID
+
+[libusb_add_reg_friendlyname_1290]
+HKR,,FriendlyName,,%DeviceName_1290%
+
+[libusb_add_reg_friendlyname_1291]
+HKR,,FriendlyName,,%DeviceName_1291%
+
+[libusb_add_reg_friendlyname_1292]
+HKR,,FriendlyName,,%DeviceName_1292%
+
+[libusb_add_reg_friendlyname_1293]
+HKR,,FriendlyName,,%DeviceName_1293%
+
+[libusb_add_reg_friendlyname_1294]
+HKR,,FriendlyName,,%DeviceName_1294%
+
+[libusb_add_reg_friendlyname_1295]
+HKR,,FriendlyName,,%DeviceName_1295%
+
+[libusb_add_reg_friendlyname_1296]
+HKR,,FriendlyName,,%DeviceName_1296%
+
+[libusb_add_reg_friendlyname_1297]
+HKR,,FriendlyName,,%DeviceName_1297%
+
+[libusb_add_reg_friendlyname_1298]
+HKR,,FriendlyName,,%DeviceName_1298%
+
+[libusb_add_reg_friendlyname_1299]
+HKR,,FriendlyName,,%DeviceName_1299%
+
+[libusb_add_reg_friendlyname_129A]
+HKR,,FriendlyName,,%DeviceName_129A%
+
+[libusb_add_reg_friendlyname_129B]
+HKR,,FriendlyName,,%DeviceName_129B%
+
+[libusb_add_reg_friendlyname_129C]
+HKR,,FriendlyName,,%DeviceName_129C%
+
+[libusb_add_reg_friendlyname_129D]
+HKR,,FriendlyName,,%DeviceName_129D%
+
+[libusb_add_reg_friendlyname_129E]
+HKR,,FriendlyName,,%DeviceName_129E%
+
+[libusb_add_reg_friendlyname_129F]
+HKR,,FriendlyName,,%DeviceName_129F%
+
+[libusb_add_reg_friendlyname_12A0]
+HKR,,FriendlyName,,%DeviceName_12A0%
+
+[libusb_add_reg_friendlyname_12A1]
+HKR,,FriendlyName,,%DeviceName_12A1%
+
+[libusb_add_reg_friendlyname_12A2]
+HKR,,FriendlyName,,%DeviceName_12A2%
+
+[libusb_add_reg_friendlyname_12A3]
+HKR,,FriendlyName,,%DeviceName_12A3%
+
+[libusb_add_reg_friendlyname_12A4]
+HKR,,FriendlyName,,%DeviceName_12A4%
+
+[libusb_add_reg_friendlyname_12A5]
+HKR,,FriendlyName,,%DeviceName_12A5%
+
+[libusb_add_reg_friendlyname_12A6]
+HKR,,FriendlyName,,%DeviceName_12A6%
+
+[libusb_add_reg_friendlyname_12A7]
+HKR,,FriendlyName,,%DeviceName_12A7%
+
+[libusb_add_reg_friendlyname_12A8]
+HKR,,FriendlyName,,%DeviceName_12A8%
+
+[libusb_add_reg_friendlyname_12A9]
+HKR,,FriendlyName,,%DeviceName_12A9%
+
+[libusb_add_reg_friendlyname_12AA]
+HKR,,FriendlyName,,%DeviceName_12AA%
+
+[libusb_add_reg_friendlyname_12AB]
+HKR,,FriendlyName,,%DeviceName_12AB%
+
+[libusb_add_reg_friendlyname_12AC]
+HKR,,FriendlyName,,%DeviceName_12AC%
+
+[libusb_add_reg_friendlyname_12AD]
+HKR,,FriendlyName,,%DeviceName_12AD%
+
+[libusb_add_reg_friendlyname_12AE]
+HKR,,FriendlyName,,%DeviceName_12AE%
+
+[libusb_add_reg_friendlyname_12AF]
+HKR,,FriendlyName,,%DeviceName_12AF%
+
+[Devices]
+%DeviceName_1290% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1290
+%DeviceName_1291% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1291
+%DeviceName_1292% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1292
+%DeviceName_1293% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1293
+%DeviceName_1294% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1294
+%DeviceName_1295% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1295
+%DeviceName_1296% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1296
+%DeviceName_1297% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1297
+%DeviceName_1298% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1298
+%DeviceName_1299% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_1299
+%DeviceName_129A% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_129A
+%DeviceName_129B% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_129B
+%DeviceName_129C% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_129C
+%DeviceName_129D% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_129D
+%DeviceName_129E% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_129E
+%DeviceName_129F% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_129F
+%DeviceName_12A0% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A0
+%DeviceName_12A1% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A1
+%DeviceName_12A2% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A2
+%DeviceName_12A3% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A3
+%DeviceName_12A4% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A4
+%DeviceName_12A5% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A5
+%DeviceName_12A6% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A6
+%DeviceName_12A7% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A7
+%DeviceName_12A8% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A8
+%DeviceName_12A9% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12A9
+%DeviceName_12AA% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12AA
+%DeviceName_12AB% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12AB
+%DeviceName_12AC% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12AC
+%DeviceName_12AD% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12AD
+%DeviceName_12AE% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12AE
+%DeviceName_12AF% = LIBUSB_WIN32_DEV, USB\VID_05AC&PID_12AF
+
+[Devices.NT]
+%DeviceName_1290% = LIBUSB_WIN32_DEV_1290.NT, USB\VID_05AC&PID_1290
+%DeviceName_1291% = LIBUSB_WIN32_DEV_1291.NT, USB\VID_05AC&PID_1291
+%DeviceName_1292% = LIBUSB_WIN32_DEV_1292.NT, USB\VID_05AC&PID_1292
+%DeviceName_1293% = LIBUSB_WIN32_DEV_1293.NT, USB\VID_05AC&PID_1293
+%DeviceName_1294% = LIBUSB_WIN32_DEV_1294.NT, USB\VID_05AC&PID_1294
+%DeviceName_1295% = LIBUSB_WIN32_DEV_1295.NT, USB\VID_05AC&PID_1295
+%DeviceName_1296% = LIBUSB_WIN32_DEV_1296.NT, USB\VID_05AC&PID_1296
+%DeviceName_1297% = LIBUSB_WIN32_DEV_1297.NT, USB\VID_05AC&PID_1297
+%DeviceName_1298% = LIBUSB_WIN32_DEV_1298.NT, USB\VID_05AC&PID_1298
+%DeviceName_1299% = LIBUSB_WIN32_DEV_1299.NT, USB\VID_05AC&PID_1299
+%DeviceName_129A% = LIBUSB_WIN32_DEV_129A.NT, USB\VID_05AC&PID_129A
+%DeviceName_129B% = LIBUSB_WIN32_DEV_129B.NT, USB\VID_05AC&PID_129B
+%DeviceName_129C% = LIBUSB_WIN32_DEV_129C.NT, USB\VID_05AC&PID_129C
+%DeviceName_129D% = LIBUSB_WIN32_DEV_129D.NT, USB\VID_05AC&PID_129D
+%DeviceName_129E% = LIBUSB_WIN32_DEV_129E.NT, USB\VID_05AC&PID_129E
+%DeviceName_129F% = LIBUSB_WIN32_DEV_129F.NT, USB\VID_05AC&PID_129F
+%DeviceName_12A0% = LIBUSB_WIN32_DEV_12A0.NT, USB\VID_05AC&PID_12A0
+%DeviceName_12A1% = LIBUSB_WIN32_DEV_12A1.NT, USB\VID_05AC&PID_12A1
+%DeviceName_12A2% = LIBUSB_WIN32_DEV_12A2.NT, USB\VID_05AC&PID_12A2
+%DeviceName_12A3% = LIBUSB_WIN32_DEV_12A3.NT, USB\VID_05AC&PID_12A3
+%DeviceName_12A4% = LIBUSB_WIN32_DEV_12A4.NT, USB\VID_05AC&PID_12A4
+%DeviceName_12A5% = LIBUSB_WIN32_DEV_12A5.NT, USB\VID_05AC&PID_12A5
+%DeviceName_12A6% = LIBUSB_WIN32_DEV_12A6.NT, USB\VID_05AC&PID_12A6
+%DeviceName_12A7% = LIBUSB_WIN32_DEV_12A7.NT, USB\VID_05AC&PID_12A7
+%DeviceName_12A8% = LIBUSB_WIN32_DEV_12A8.NT, USB\VID_05AC&PID_12A8
+%DeviceName_12A9% = LIBUSB_WIN32_DEV_12A9.NT, USB\VID_05AC&PID_12A9
+%DeviceName_12AA% = LIBUSB_WIN32_DEV_12AA.NT, USB\VID_05AC&PID_12AA
+%DeviceName_12AB% = LIBUSB_WIN32_DEV_12AB.NT, USB\VID_05AC&PID_12AB
+%DeviceName_12AC% = LIBUSB_WIN32_DEV_12AC.NT, USB\VID_05AC&PID_12AC
+%DeviceName_12AD% = LIBUSB_WIN32_DEV_12AD.NT, USB\VID_05AC&PID_12AD
+%DeviceName_12AE% = LIBUSB_WIN32_DEV_12AE.NT, USB\VID_05AC&PID_12AE
+%DeviceName_12AF% = LIBUSB_WIN32_DEV_12AF.NT, USB\VID_05AC&PID_12AF
+
+[Devices.NTAMD64]
+%DeviceName_1290% = LIBUSB_WIN32_DEV_1290.NTAMD64, USB\VID_05AC&PID_1290
+%DeviceName_1291% = LIBUSB_WIN32_DEV_1291.NTAMD64, USB\VID_05AC&PID_1291
+%DeviceName_1292% = LIBUSB_WIN32_DEV_1292.NTAMD64, USB\VID_05AC&PID_1292
+%DeviceName_1293% = LIBUSB_WIN32_DEV_1293.NTAMD64, USB\VID_05AC&PID_1293
+%DeviceName_1294% = LIBUSB_WIN32_DEV_1294.NTAMD64, USB\VID_05AC&PID_1294
+%DeviceName_1295% = LIBUSB_WIN32_DEV_1295.NTAMD64, USB\VID_05AC&PID_1295
+%DeviceName_1296% = LIBUSB_WIN32_DEV_1296.NTAMD64, USB\VID_05AC&PID_1296
+%DeviceName_1297% = LIBUSB_WIN32_DEV_1297.NTAMD64, USB\VID_05AC&PID_1297
+%DeviceName_1298% = LIBUSB_WIN32_DEV_1298.NTAMD64, USB\VID_05AC&PID_1298
+%DeviceName_1299% = LIBUSB_WIN32_DEV_1299.NTAMD64, USB\VID_05AC&PID_1299
+%DeviceName_129A% = LIBUSB_WIN32_DEV_129A.NTAMD64, USB\VID_05AC&PID_129A
+%DeviceName_129B% = LIBUSB_WIN32_DEV_129B.NTAMD64, USB\VID_05AC&PID_129B
+%DeviceName_129C% = LIBUSB_WIN32_DEV_129C.NTAMD64, USB\VID_05AC&PID_129C
+%DeviceName_129D% = LIBUSB_WIN32_DEV_129D.NTAMD64, USB\VID_05AC&PID_129D
+%DeviceName_129E% = LIBUSB_WIN32_DEV_129E.NTAMD64, USB\VID_05AC&PID_129E
+%DeviceName_129F% = LIBUSB_WIN32_DEV_129F.NTAMD64, USB\VID_05AC&PID_129F
+%DeviceName_12A0% = LIBUSB_WIN32_DEV_12A0.NTAMD64, USB\VID_05AC&PID_12A0
+%DeviceName_12A1% = LIBUSB_WIN32_DEV_12A1.NTAMD64, USB\VID_05AC&PID_12A1
+%DeviceName_12A2% = LIBUSB_WIN32_DEV_12A2.NTAMD64, USB\VID_05AC&PID_12A2
+%DeviceName_12A3% = LIBUSB_WIN32_DEV_12A3.NTAMD64, USB\VID_05AC&PID_12A3
+%DeviceName_12A4% = LIBUSB_WIN32_DEV_12A4.NTAMD64, USB\VID_05AC&PID_12A4
+%DeviceName_12A5% = LIBUSB_WIN32_DEV_12A5.NTAMD64, USB\VID_05AC&PID_12A5
+%DeviceName_12A6% = LIBUSB_WIN32_DEV_12A6.NTAMD64, USB\VID_05AC&PID_12A6
+%DeviceName_12A7% = LIBUSB_WIN32_DEV_12A7.NTAMD64, USB\VID_05AC&PID_12A7
+%DeviceName_12A8% = LIBUSB_WIN32_DEV_12A8.NTAMD64, USB\VID_05AC&PID_12A8
+%DeviceName_12A9% = LIBUSB_WIN32_DEV_12A9.NTAMD64, USB\VID_05AC&PID_12A9
+%DeviceName_12AA% = LIBUSB_WIN32_DEV_12AA.NTAMD64, USB\VID_05AC&PID_12AA
+%DeviceName_12AB% = LIBUSB_WIN32_DEV_12AB.NTAMD64, USB\VID_05AC&PID_12AB
+%DeviceName_12AC% = LIBUSB_WIN32_DEV_12AC.NTAMD64, USB\VID_05AC&PID_12AC
+%DeviceName_12AD% = LIBUSB_WIN32_DEV_12AD.NTAMD64, USB\VID_05AC&PID_12AD
+%DeviceName_12AE% = LIBUSB_WIN32_DEV_12AE.NTAMD64, USB\VID_05AC&PID_12AE
+%DeviceName_12AF% = LIBUSB_WIN32_DEV_12AF.NTAMD64, USB\VID_05AC&PID_12AF
+
+[Devices.NTARM64]
+%DeviceName_1290% = LIBUSB_WIN32_DEV_1290.NTARM64, USB\VID_05AC&PID_1290
+%DeviceName_1291% = LIBUSB_WIN32_DEV_1291.NTARM64, USB\VID_05AC&PID_1291
+%DeviceName_1292% = LIBUSB_WIN32_DEV_1292.NTARM64, USB\VID_05AC&PID_1292
+%DeviceName_1293% = LIBUSB_WIN32_DEV_1293.NTARM64, USB\VID_05AC&PID_1293
+%DeviceName_1294% = LIBUSB_WIN32_DEV_1294.NTARM64, USB\VID_05AC&PID_1294
+%DeviceName_1295% = LIBUSB_WIN32_DEV_1295.NTARM64, USB\VID_05AC&PID_1295
+%DeviceName_1296% = LIBUSB_WIN32_DEV_1296.NTARM64, USB\VID_05AC&PID_1296
+%DeviceName_1297% = LIBUSB_WIN32_DEV_1297.NTARM64, USB\VID_05AC&PID_1297
+%DeviceName_1298% = LIBUSB_WIN32_DEV_1298.NTARM64, USB\VID_05AC&PID_1298
+%DeviceName_1299% = LIBUSB_WIN32_DEV_1299.NTARM64, USB\VID_05AC&PID_1299
+%DeviceName_129A% = LIBUSB_WIN32_DEV_129A.NTARM64, USB\VID_05AC&PID_129A
+%DeviceName_129B% = LIBUSB_WIN32_DEV_129B.NTARM64, USB\VID_05AC&PID_129B
+%DeviceName_129C% = LIBUSB_WIN32_DEV_129C.NTARM64, USB\VID_05AC&PID_129C
+%DeviceName_129D% = LIBUSB_WIN32_DEV_129D.NTARM64, USB\VID_05AC&PID_129D
+%DeviceName_129E% = LIBUSB_WIN32_DEV_129E.NTARM64, USB\VID_05AC&PID_129E
+%DeviceName_129F% = LIBUSB_WIN32_DEV_129F.NTARM64, USB\VID_05AC&PID_129F
+%DeviceName_12A0% = LIBUSB_WIN32_DEV_12A0.NTARM64, USB\VID_05AC&PID_12A0
+%DeviceName_12A1% = LIBUSB_WIN32_DEV_12A1.NTARM64, USB\VID_05AC&PID_12A1
+%DeviceName_12A2% = LIBUSB_WIN32_DEV_12A2.NTARM64, USB\VID_05AC&PID_12A2
+%DeviceName_12A3% = LIBUSB_WIN32_DEV_12A3.NTARM64, USB\VID_05AC&PID_12A3
+%DeviceName_12A4% = LIBUSB_WIN32_DEV_12A4.NTARM64, USB\VID_05AC&PID_12A4
+%DeviceName_12A5% = LIBUSB_WIN32_DEV_12A5.NTARM64, USB\VID_05AC&PID_12A5
+%DeviceName_12A6% = LIBUSB_WIN32_DEV_12A6.NTARM64, USB\VID_05AC&PID_12A6
+%DeviceName_12A7% = LIBUSB_WIN32_DEV_12A7.NTARM64, USB\VID_05AC&PID_12A7
+%DeviceName_12A8% = LIBUSB_WIN32_DEV_12A8.NTARM64, USB\VID_05AC&PID_12A8
+%DeviceName_12A9% = LIBUSB_WIN32_DEV_12A9.NTARM64, USB\VID_05AC&PID_12A9
+%DeviceName_12AA% = LIBUSB_WIN32_DEV_12AA.NTARM64, USB\VID_05AC&PID_12AA
+%DeviceName_12AB% = LIBUSB_WIN32_DEV_12AB.NTARM64, USB\VID_05AC&PID_12AB
+%DeviceName_12AC% = LIBUSB_WIN32_DEV_12AC.NTARM64, USB\VID_05AC&PID_12AC
+%DeviceName_12AD% = LIBUSB_WIN32_DEV_12AD.NTARM64, USB\VID_05AC&PID_12AD
+%DeviceName_12AE% = LIBUSB_WIN32_DEV_12AE.NTARM64, USB\VID_05AC&PID_12AE
+%DeviceName_12AF% = LIBUSB_WIN32_DEV_12AF.NTARM64, USB\VID_05AC&PID_12AF
+

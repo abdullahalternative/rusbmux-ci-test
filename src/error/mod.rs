@@ -2,6 +2,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum RusbmuxError {
+    #[cfg(feature = "nusb")]
     #[error("USB error: {0}")]
     USB(#[from] nusb::Error),
 
@@ -47,6 +48,7 @@ pub enum RusbmuxError {
     #[error("{0}")]
     Idevice(#[from] idevice::IdeviceError),
 
+    #[cfg(feature = "rusb")]
     #[error("{0}")]
     RusbError(#[from] rusb::Error),
 }

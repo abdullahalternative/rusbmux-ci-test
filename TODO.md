@@ -64,7 +64,7 @@
 - [x] macOS
 - [ ] Android
 - [ ] FreeBSD
-- [ ] Windows (not sure about this)
+- [x] Windows
 
 ### Arch
 
