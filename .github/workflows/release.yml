@@ -1,0 +1,216 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['Cargo.toml']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Check whether the version in Cargo.toml has
+  # changed (push) or if this is a manual run.
+  # ──────────────────────────────────────────────
+  version-check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.version.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract version & check if changed
+        id: version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            PREV=$(git show HEAD~1:Cargo.toml 2>/dev/null \
+              | grep '^version = ' | head -1 | sed 's/version = "\(.*\)"/\1/' || echo "")
+            if [ "$VERSION" != "$PREV" ]; then
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  # ──────────────────────────────────────────────
+  # Windows  –  rusbmux + USB driver + Inno Setup
+  # ──────────────────────────────────────────────
+  build-windows:
+    needs: version-check
+    if: needs.version-check.outputs.should_release == 'true'
+    runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: D:\a\rusbmux\target
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+            D:\a\rusbmux\target
+          key: windows-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build rusbmux
+        run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin
+
+      - name: Build USB driver
+        run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
+
+      - name: Install shawl
+        run: cargo install shawl
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\rusbmux-setup.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: windows/dist/rusbmux-*.exe
+
+  # ──────────────────────────────────────────────
+  # Linux  –  glibc  +  musl (fully static)
+  # ──────────────────────────────────────────────
+  build-linux:
+    needs: version-check
+    if: needs.version-check.outputs.should_release == 'true'
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install musl tools (musl target only)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename & upload binary
+        run: |
+          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.target }}"
+          chmod +x "rusbmux-${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rusbmux-${{ matrix.target }}
+          path: rusbmux-${{ matrix.target }}
+
+  # ──────────────────────────────────────────────
+  # macOS  –  Intel  +  Apple Silicon
+  # ──────────────────────────────────────────────
+  build-macos:
+    needs: version-check
+    if: needs.version-check.outputs.should_release == 'true'
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename & upload binary
+        run: |
+          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.target }}"
+          chmod +x "rusbmux-${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rusbmux-${{ matrix.target }}
+          path: rusbmux-${{ matrix.target }}
+
+  # ──────────────────────────────────────────────
+  # Release  –  collect artifacts + publish
+  # ──────────────────────────────────────────────
+  create-release:
+    needs:
+      - version-check
+      - build-windows
+      - build-linux
+      - build-macos
+    if: needs.version-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0             # need full history for changelog
+
+      - name: Generate changelog
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -z "$LAST_TAG" ]; then
+            echo "Initial release" > release_body.md
+          else
+            git log "$LAST_TAG..HEAD" \
+              --pretty=format:"* %s (%h)" \
+              --no-merges > release_body.md
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Show downloaded files
+        run: find artifacts -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version-check.outputs.version }}
+          name: v${{ needs.version-check.outputs.version }}
+          body_path: release_body.md
+          draft: false
+          prerelease: false
+          files: artifacts/**/*
