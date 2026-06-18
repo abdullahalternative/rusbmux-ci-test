@@ -6,11 +6,6 @@ All notable changes to this project will be documented in this file.
 
 """
 body = """
-{% if version %}\
-    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
-{% else %}\
-    ## [unreleased]
-{% endif %}\
 {% for group, group_commits in commits | group_by(attribute="group") %}
     {% set group_clean = group | striptags | trim %}
     {% if group_clean == "Other Commits" %}
@@ -53,8 +48,8 @@ body = """
 """
 trim = true
 postprocessors = [
-    { pattern = '<REPO>', replace = "https://github.com/abdullah-albanna/rusbmux" },
-    { pattern = '(?m)^> ', replace = '  > ' },
+  { pattern = '<REPO>', replace = "https://github.com/abdullah-albanna/rusbmux" },
+  { pattern = '(?m)^> ', replace = '  > ' },
 ]
 
 [git]
@@ -63,35 +58,35 @@ filter_unconventional = false
 protect_breaking_commits = true
 filter_commits = true
 commit_preprocessors = [
-    { pattern = '^fix:?$', replace = '[internal] fix' },
-    { pattern = '(?i)^(typo|wip|bump|update|todo|temp)', replace = '[internal] $0' },
-    { pattern = '(?i)^(minor|small fix|fix)$', replace = '[internal] $0' },
-    { pattern = '^chore\(deps', replace = '[internal] $0' },
-    { pattern = '^chore\(release', replace = '[internal] $0' },
-    { pattern = '^\.$', replace = '[internal] .' },
-    { pattern = '^Merge (pull request|branch)', replace = '[internal] $0' },
-    { pattern = '\(#(\d+)', replace = "([#${1}](<REPO>/issues/${1}))" },
+  { pattern = '^fix:?$', replace = '[internal] fix' },
+  { pattern = '(?i)^(typo|wip|bump|update|todo|temp)', replace = '[internal] $0' },
+  { pattern = '(?i)^(minor|small fix|fix)$', replace = '[internal] $0' },
+  { pattern = '^chore\(deps', replace = '[internal] $0' },
+  { pattern = '^chore\(release', replace = '[internal] $0' },
+  { pattern = '^\.$', replace = '[internal] .' },
+  { pattern = '^Merge (pull request|branch)', replace = '[internal] $0' },
+  { pattern = '\(#(\d+)', replace = "([#${1}](<REPO>/issues/${1}))" },
 ]
 commit_parsers = [
-    { message = "^\\[internal\\]", skip = true },
-    { message = "^feat", group = "<!-- 00 -->Features" },
-    { message = "^fix", group = "<!-- 01 -->Bug Fixes" },
-    { message = "^docs", group = "<!-- 02 -->Documentation" },
-    { message = "^perf", group = "<!-- 03 -->Performance" },
-    { message = "^refactor", group = "<!-- 04 -->Refactoring" },
-    { message = "^style", group = "<!-- 05 -->Styling" },
-    { message = "^test", group = "<!-- 06 -->Testing" },
-    { message = "^build", group = "<!-- 07 -->Build System" },
-    { message = "^ci", group = "<!-- 08 -->Continuous Integration" },
-    { message = "^revert", group = "<!-- 09 -->Reverts" },
-    { message = "^chore\\(deps", skip = true },
-    { message = "^chore\\(release", skip = true },
-    { message = "^chore", group = "<!-- 10 -->Miscellaneous Tasks" },
-    { body = ".*security", group = "<!-- 11 -->Security" },
-    { message = ".*", group = "<!-- 12 -->Other Commits" },
+  { message = "^\\[internal\\]", skip = true },
+  { message = "^feat", group = "<!-- 00 -->Features" },
+  { message = "^fix", group = "<!-- 01 -->Bug Fixes" },
+  { message = "^docs", group = "<!-- 02 -->Documentation" },
+  { message = "^perf", group = "<!-- 03 -->Performance" },
+  { message = "^refactor", group = "<!-- 04 -->Refactoring" },
+  { message = "^style", group = "<!-- 05 -->Styling" },
+  { message = "^test", group = "<!-- 06 -->Testing" },
+  { message = "^build", group = "<!-- 07 -->Build System" },
+  { message = "^ci", group = "<!-- 08 -->Continuous Integration" },
+  { message = "^revert", group = "<!-- 09 -->Reverts" },
+  { message = "^chore\\(deps", skip = true },
+  { message = "^chore\\(release", skip = true },
+  { message = "^chore", group = "<!-- 10 -->Miscellaneous Tasks" },
+  { body = ".*security", group = "<!-- 11 -->Security" },
+  { message = ".*", group = "<!-- 12 -->Other Commits" },
 ]
 link_parsers = [
-    { pattern = "#(\\d+)", text = "#$1", href = "https://github.com/abdullah-albanna/rusbmux/issues/$1" },
+  { pattern = "#(\\d+)", text = "#$1", href = "https://github.com/abdullah-albanna/rusbmux/issues/$1" },
 ]
 topo_order_commits = true
 sort_commits = "oldest"
