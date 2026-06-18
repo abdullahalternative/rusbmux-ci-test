@@ -51,16 +51,18 @@ jobs:
     env:
       CARGO_TARGET_DIR: D:\a\rusbmux\target
     steps:
+      - name: Force GNU tar priority
+        shell: pwsh
+        run: |
+          "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+
+      - name: Verify tar
+        run: tar --version
+
       - uses: actions/checkout@v4
 
-      - name: Install LLVM (lld-link)
-        run: choco install llvm -y
-
-      - name: Add LLVM to PATH
-        run: echo "C:\Program Files\LLVM\bin" | Out-File -Append -FilePath $env:GITHUB_PATH
-
       - name: Restore cached target
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ~\.cargo\registry
@@ -98,7 +100,7 @@ jobs:
         run: gh cache delete windows-cargo || true
 
       - name: Save new cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ~\.cargo\registry
@@ -140,7 +142,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Restore cached target
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cargo/registry
@@ -162,7 +164,7 @@ jobs:
         run: gh cache delete linux-${{ matrix.name }}-cargo || true
 
       - name: Save new cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ~/.cargo/registry
@@ -197,7 +199,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Restore cached target
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cargo/registry
@@ -219,7 +221,7 @@ jobs:
         run: gh cache delete macos-${{ matrix.name }}-cargo || true
 
       - name: Save new cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ~/.cargo/registry
