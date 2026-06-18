@@ -45,6 +45,9 @@ jobs:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
     runs-on: windows-latest
+    permissions:
+      actions: write
+      contents: read
     env:
       CARGO_TARGET_DIR: D:\a\rusbmux\target
     steps:
@@ -56,14 +59,14 @@ jobs:
       - name: Add LLVM to PATH
         run: echo "C:\Program Files\LLVM\bin" | Out-File -Append -FilePath $env:GITHUB_PATH
 
-      - name: Cache Cargo registry + build
-        uses: actions/cache@v4
+      - name: Restore cached target
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~\.cargo\registry
             ~\.cargo\git
             D:\a\rusbmux\target
-          key: windows-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: windows-cargo
 
       - name: Build rusbmux
         env:
@@ -89,6 +92,20 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\rusbmux-setup.iss
 
+      - name: Delete previous cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh cache delete windows-cargo || true
+
+      - name: Save new cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+            D:\a\rusbmux\target
+          key: windows-cargo
+
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
@@ -107,6 +124,9 @@ jobs:
           - target: x86_64-unknown-linux-musl
             name: linux-amd64-musl
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -119,14 +139,14 @@ jobs:
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
-      - name: Cache Cargo registry + build
-        uses: actions/cache@v4
+      - name: Restore cached target
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: linux-${{ matrix.name }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: linux-${{ matrix.name }}-cargo
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -135,6 +155,21 @@ jobs:
         run: |
           cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
           chmod +x "rusbmux-${{ matrix.name }}"
+
+      - name: Delete previous cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh cache delete linux-${{ matrix.name }}-cargo || true
+
+      - name: Save new cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-${{ matrix.name }}-cargo
+
       - uses: actions/upload-artifact@v4
         with:
           name: rusbmux-${{ matrix.name }}
@@ -152,20 +187,23 @@ jobs:
           - target: aarch64-apple-darwin
             name: macos-aarch64
     runs-on: macos-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
-      - name: Cache Cargo registry + build
-        uses: actions/cache@v4
+      - name: Restore cached target
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: macos-${{ matrix.name }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: macos-${{ matrix.name }}-cargo
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -174,6 +212,21 @@ jobs:
         run: |
           cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
           chmod +x "rusbmux-${{ matrix.name }}"
+
+      - name: Delete previous cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh cache delete macos-${{ matrix.name }}-cargo || true
+
+      - name: Save new cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-${{ matrix.name }}-cargo
+
       - uses: actions/upload-artifact@v4
         with:
           name: rusbmux-${{ matrix.name }}
