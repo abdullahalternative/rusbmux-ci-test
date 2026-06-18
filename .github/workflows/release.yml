@@ -186,16 +186,16 @@ jobs:
         with:
           fetch-depth: 0             # need full history for changelog
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
       - name: Generate changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          if [ -z "$LAST_TAG" ]; then
-            echo "Initial release" > release_body.md
-          else
-            git log "$LAST_TAG..HEAD" \
-              --pretty=format:"* %s (%h)" \
-              --no-merges > release_body.md
-          fi
+          git cliff --config cliff.toml --unreleased --strip header \
+            --github-repo "${{ github.repository }}" > release_body.md
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
