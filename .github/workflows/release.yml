@@ -195,7 +195,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git cliff --config cliff.toml --unreleased --strip header \
-            --github-repo "${{ github.repository }}" > release_body.md
+            --github-repo "${{ github.repository }}" > release_body.md \
+            || git cliff --config cliff.toml --unreleased --strip header > release_body.md
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
