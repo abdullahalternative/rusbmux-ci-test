@@ -10,10 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ──────────────────────────────────────────────
   # Check whether the version in Cargo.toml has
   # changed (push) or if this is a manual run.
-  # ──────────────────────────────────────────────
   version-check:
     runs-on: ubuntu-latest
     outputs:
@@ -42,9 +40,7 @@ jobs:
             fi
           fi
 
-  # ──────────────────────────────────────────────
   # Windows  –  rusbmux + USB driver + Inno Setup
-  # ──────────────────────────────────────────────
   build-windows:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
@@ -53,6 +49,12 @@ jobs:
       CARGO_TARGET_DIR: D:\a\rusbmux\target
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install LLVM (lld-link)
+        run: choco install llvm -y
+
+      - name: Add LLVM to PATH
+        run: echo "C:\Program Files\LLVM\bin" | Out-File -Append -FilePath $env:GITHUB_PATH
 
       - name: Cache Cargo registry + build
         uses: actions/cache@v4
@@ -64,12 +66,18 @@ jobs:
           key: windows-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build rusbmux
+        env:
+          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
         run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin
 
       - name: Build USB driver
+        env:
+          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
         run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
 
       - name: Install shawl
+        env:
+          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
         run: cargo install shawl
 
       - name: Install Inno Setup
@@ -87,15 +95,17 @@ jobs:
           name: windows-installer
           path: windows/dist/rusbmux-*.exe
 
-  # ──────────────────────────────────────────────
   # Linux  –  glibc  +  musl (fully static)
-  # ──────────────────────────────────────────────
   build-linux:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            name: linux-amd64
+          - target: x86_64-unknown-linux-musl
+            name: linux-amd64-musl
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -116,29 +126,31 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: linux-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: linux-${{ matrix.name }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename & upload binary
         run: |
-          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.target }}"
-          chmod +x "rusbmux-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
+          chmod +x "rusbmux-${{ matrix.name }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: rusbmux-${{ matrix.target }}
-          path: rusbmux-${{ matrix.target }}
+          name: rusbmux-${{ matrix.name }}
+          path: rusbmux-${{ matrix.name }}
 
-  # ──────────────────────────────────────────────
   # macOS  –  Intel  +  Apple Silicon
-  # ──────────────────────────────────────────────
   build-macos:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
     strategy:
       matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+        include:
+          - target: x86_64-apple-darwin
+            name: macos-x86_64
+          - target: aarch64-apple-darwin
+            name: macos-aarch64
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -153,23 +165,21 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: macos-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: macos-${{ matrix.name }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename & upload binary
         run: |
-          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.target }}"
-          chmod +x "rusbmux-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
+          chmod +x "rusbmux-${{ matrix.name }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: rusbmux-${{ matrix.target }}
-          path: rusbmux-${{ matrix.target }}
+          name: rusbmux-${{ matrix.name }}
+          path: rusbmux-${{ matrix.name }}
 
-  # ──────────────────────────────────────────────
   # Release  –  collect artifacts + publish
-  # ──────────────────────────────────────────────
   create-release:
     needs:
       - version-check
