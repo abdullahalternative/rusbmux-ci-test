@@ -8,7 +8,7 @@ pub(crate) fn nusb_speed_to_number(speed: nusb::Speed) -> u64 {
         nusb::Speed::High => 480_000_000,
         nusb::Speed::Super => 5_000_000_000,
         nusb::Speed::SuperPlus => 10_000_000_000,
-        unknown => panic!("unknown device speed: {unknown:?}"),
+        unknown => panic!("lunknown device speed: {unknown:?}"),
     }
 }
 
