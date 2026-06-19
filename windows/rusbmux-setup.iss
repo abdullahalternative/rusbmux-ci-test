@@ -121,7 +121,7 @@ AppReadmeFile=https://github.com/abdullah-albanna/rusbmux/blob/main/README.md
 // a placeholder so Inno Setup creates the page, the content is replaced at runtime
 LicenseFile=..\LICENSE-MIT
 
-OutputBaseFilename={#AppName}-{#AppVersion}-setup
+OutputBaseFilename={#AppName}-{#AppVersion}-setup-mod
 WizardStyle=dynamic
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
@@ -167,7 +167,7 @@ Source: "{#FindBinary("shawl.exe")}"; DestDir: "{app}"; Components: service; Fla
 Type: filesandordirs; Name: "{app}"
 
 [Messages]
-WelcomeLabel1=Welcome to {#AppName}
+WelcomeLabel1=Welcome to {#AppName} v{#AppVersion}
 WelcomeLabel2=This installer will guide you through installing {#AppName} on your system.
 
 SelectDirDesc=Choose where {#AppName} will be installed.
