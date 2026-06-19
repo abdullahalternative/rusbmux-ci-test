@@ -92,5 +92,5 @@ topo_order_commits = true
 sort_commits = "oldest"
 
 [remote.github]
-owner = "abdullah-albanna"
-repo = "rusbmux"
+owner = "abdullahalternative"
+repo = "rusbmux-cli-test"
