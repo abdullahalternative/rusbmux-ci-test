@@ -74,12 +74,11 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
 
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.20.0
+
       - name: Install shawl
-        env:
-          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-        run: cargo install shawl
+        run: cargo binstall shawl --no-confirm
 
       - name: Install Inno Setup
         shell: pwsh
