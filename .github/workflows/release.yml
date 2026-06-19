@@ -44,19 +44,14 @@ jobs:
   build-windows:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-pc-windows-msvc
-          - name: windows-x86_64
     runs-on: windows-latest
     env:
       CARGO_TARGET_DIR: D:\a\rusbmux\target
     steps:
-      - name: Set up Rust for ${{ matrix.name }}
+      - name: Set up Rust for windows-x86_64
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: x86_64-pc-windows-msvc
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.10
@@ -70,15 +65,14 @@ jobs:
           RUSTFLAGS: "-C link-arg=/USECL:lld-link"
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
-        run: |
-          cargo build --release --no-default-features -F rusb,rusb-vendored,bin --target ${{ matrix.target }}
+        run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin --target x86_64-pc-windows-msvc
 
       - name: Build USB driver
         env:
           RUSTFLAGS: "-C link-arg=/USECL:lld-link"
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
-        run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
+        run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml --target x86_64-pc-windows-msvc
 
       - name: Install shawl
         env:
