@@ -65,14 +65,14 @@ jobs:
           RUSTFLAGS: "-C link-arg=/USECL:lld-link"
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
-        run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin --target x86_64-pc-windows-msvc
+        run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin
 
       - name: Build USB driver
         env:
           RUSTFLAGS: "-C link-arg=/USECL:lld-link"
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
-        run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml --target x86_64-pc-windows-msvc
+        run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
 
       - name: Install shawl
         env:
