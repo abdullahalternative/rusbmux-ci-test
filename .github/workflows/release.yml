@@ -144,7 +144,7 @@ jobs:
       - name: Install fpm
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby rpm libarchive-tools
+          sudo apt-get install -y ruby rpm libarchive-tools rename
           sudo gem install fpm --no-document
 
       - name: Package
@@ -153,11 +153,6 @@ jobs:
 
           VERSION="${{ needs.version-check.outputs.version }}"
           BIN="target/${{ matrix.target }}/release/rusbmux"
-
-          PKG_NAME="rusbmux"
-          if [ "${{ matrix.libc }}" = "musl" ]; then
-            PKG_NAME="rusbmux-musl"
-          fi
 
           for fmt in deb rpm pacman apk; do
 
@@ -181,7 +176,7 @@ jobs:
             fi
 
             fpm -t "$fmt" -s dir \
-              -n "$PKG_NAME" \
+              -n rusbmux \
               -v "$VERSION" \
               --iteration 1 \
               --architecture x86_64 \
@@ -209,7 +204,13 @@ jobs:
 
       - name: Collect packages
         run: |
-          mkdir -p out && mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
+          mkdir -p out
+
+          if [[ "${{ matrix.libc }}" = "musl" ]]; then 
+            rename 's/(\.pkg\.tar\.zst|\.deb|\.rpm|\.apk)$/-musl$1/' *
+          fi
+
+          mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         with:

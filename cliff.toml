@@ -2,10 +2,11 @@
 header = """
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this release will be documented in here.
 
 """
 body = """
+{% set repo_url = "https://github.com/" ~ remote.github.owner ~ "/" ~ remote.github.repo %}
 {% for group, group_commits in commits | group_by(attribute="group") %}
     {% set group_clean = group | striptags | trim %}
     {% if group_clean == "Other Commits" %}
@@ -24,9 +25,11 @@ body = """
         - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
             {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
-            {% if commit.remote.username %} (@{{ commit.remote.username }}){% endif %}\
-            {% if commit.remote.pr_number %} in #{{ commit.remote.pr_number }}{% endif %}\
-            {%- if commit.body and commit.body | trim != "" %}{% for line in commit.body | trim | split(pat="\n") -%}{% if line | trim != "" %}
+            {% if commit.remote.pr_number %}
+            ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
+            {% else %}
+            ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
+            {% endif %}            {%- if commit.body and commit.body | trim != "" %}{% for line in commit.body | trim | split(pat="\n") -%}{% if line | trim != "" %}
 > {{ line | trim }}{% endif %}{% endfor %}{% elif commit.message | split(pat="\n") | length > 1 %}{% for line in commit.message | split(pat="\n") | slice(start=1) -%}{% if line | trim != "" %}
 > {{ line | trim }}{% endif %}{% endfor %}{% endif %}
     {% endfor %}
@@ -91,5 +94,5 @@ topo_order_commits = true
 sort_commits = "oldest"
 
 [remote.github]
-owner = "abdullahalternative"
-repo = "rusbmux-cli-test"
+owner = "abdullah-albanna"
+repo = "rusbmux"
