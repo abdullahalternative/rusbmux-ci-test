@@ -12,11 +12,14 @@ body = """
     {% if group_clean == "Other Commits" %}
 <details>
 <summary>Other Commits ({{ group_commits | length }})</summary>
-    {% for commit in group_commits %}
+{% for commit in group_commits %}
 * {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
-        {% if commit.remote.username %} (@{{ commit.remote.username }}){% endif %}\
-        {% if commit.remote.pr_number %} in #{{ commit.remote.pr_number }}{% endif %}
-    {% endfor %}
+{% if commit.remote.pr_number %}
+  ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
+{% else %}
+  ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
+{% endif %}
+{% endfor %}
 </details>
     {% else %}
     {% set group_name = group | striptags | trim | upper_first %}
