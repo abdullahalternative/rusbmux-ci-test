@@ -95,7 +95,7 @@ jobs:
           name: windows-installer
           path: windows/dist/rusbmux-*.exe
 
-  # Linux  –  glibc  +  musl (fully static)
+  # Linux  –  glibc + musl (fully static)
   build-linux:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
@@ -104,8 +104,12 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             name: linux-amd64
+            libc: glic
+
           - target: x86_64-unknown-linux-musl
             name: linux-amd64-musl
+            libc: musl
+
     runs-on: ubuntu-latest
     steps:
       - name: Set up Rust for ${{ matrix.name }}
@@ -132,15 +136,79 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename & upload binary
+      - name: Rename bins
         run: |
           cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
           chmod +x "rusbmux-${{ matrix.name }}"
 
+      - name: Install fpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby rpm
+          sudo gem install fpm --no-document
+
+      - name: Package
+        run: |
+          set -e
+
+          VERSION="${{ needs.version-check.outputs.version }}"
+          BIN="target/${{ matrix.target }}/release/rusbmux"
+
+          for fmt in deb rpm pacman apk; do
+
+            DEPS=""
+            SYSTEMD=""
+            SYSTEMD_PATH=""
+
+            if [ "${{ matrix.libc }}" = "glibc" ]; then
+              DEPS="--depends glibc --depends gcc-libs"
+            fi
+
+            if [ "$fmt" = "deb" ]; then
+              SYSTEMD="--deb-systemd systemd/rusbmux.service --deb-systemd-enable"
+            else
+              SYSTEMD_PATH="systemd/rusbmux.service=/usr/lib/systemd/system/rusbmux.service"
+            fi
+
+            if [ "$fmt" = "apk" ]; then
+              SYSTEMD=""
+              SYSTEMD_PATH=""
+            fi
+
+            fpm -t "$fmt" -s dir \
+              -n rusbmux \
+              -v "$VERSION" \
+              --iteration 1 \
+              --architecture x86_64 \
+              --license "MIT OR Apache-2.0" \
+              --maintainer "Abdullah Al-Banna <abdu.albanna@proton.me>" \
+              --url "https://github.com/abdullah-albanna/rusbmux" \
+              --description "A usbmuxd replacement in pure Rust" \
+              --category net \
+              --provides rusbmux \
+              --provides usbmuxd \
+              --replaces usbmuxd \
+              --conflicts usbmuxd \
+              --deb-dist stable \
+              --rpm-dist stable \
+              $DEPS \
+              $SYSTEMD \
+              $BIN=/usr/bin/rusbmux \
+              $SYSTEMD_PATH \
+              README.md=/usr/share/doc/rusbmux/README.md \
+              LICENSE-MIT=/usr/share/licenses/rusbmux/LICENSE-MIT \
+              LICENSE-APACHE=/usr/share/licenses/rusbmux/LICENSE-APACHE \
+              THIRD_PARTY_LICENSES.txt=/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt
+
+          done
+
+      - name: Collect packages
+        run: mkdir -p out && mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
+
       - uses: actions/upload-artifact@v4
         with:
           name: rusbmux-${{ matrix.name }}
-          path: rusbmux-${{ matrix.name }}
+          path: out/*
 
   # macOS  –  Intel  +  Apple Silicon
   build-macos:
