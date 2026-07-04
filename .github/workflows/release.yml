@@ -291,8 +291,7 @@ jobs:
           fi
 
           git cliff --config cliff.toml --unreleased \
-            --github-repo "${{ github.repository }}" \
-            --github-token "$GITHUB_TOKEN" > release_body.md
+            --github-repo "${{ github.repository }}" > release_body.md
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
