@@ -74,7 +74,6 @@ commit_parsers = [
   { message = "^docs", group = "<!-- 02 -->Documentation" },
   { message = "^perf", group = "<!-- 03 -->Performance" },
   { message = "^refactor", group = "<!-- 04 -->Refactoring" },
-  { message = "^style", group = "<!-- 05 -->Styling" },
   { message = "^test", group = "<!-- 06 -->Testing" },
   { message = "^build", group = "<!-- 07 -->Build System" },
   { message = "^ci", group = "<!-- 08 -->Continuous Integration" },

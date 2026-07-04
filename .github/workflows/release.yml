@@ -298,9 +298,10 @@ jobs:
             echo "Initial release" > release_body.md
             exit 0
           fi
+
           git cliff --config cliff.toml --unreleased \
-            --github-repo "${{ github.repository }}" > release_body.md \
-            || git cliff --config cliff.toml --unreleased > release_body.md
+            --github-repo "${{ github.repository }}" \
+            --github-token "$GITHUB_TOKEN" > release_body.md
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
