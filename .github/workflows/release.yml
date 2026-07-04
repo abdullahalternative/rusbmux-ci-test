@@ -154,6 +154,11 @@ jobs:
           VERSION="${{ needs.version-check.outputs.version }}"
           BIN="target/${{ matrix.target }}/release/rusbmux"
 
+          PKG_NAME="rusbmux"
+          if [ "${{ matrix.libc }}" = "musl" ]; then
+            PKG_NAME="rusbmux-musl"
+          fi
+
           for fmt in deb rpm pacman apk; do
 
             DEPS=""
@@ -176,7 +181,7 @@ jobs:
             fi
 
             fpm -t "$fmt" -s dir \
-              -n rusbmux \
+              -n "$PKG_NAME" \
               -v "$VERSION" \
               --iteration 1 \
               --architecture x86_64 \
@@ -203,7 +208,17 @@ jobs:
           done
 
       - name: Collect packages
-        run: mkdir -p out && mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
+        run: |
+          if [ "${{ matrix.libc }}" = "musl" ]; then
+            mv *{.deb, -musl.deb}
+            mv *{.rpm, -musl.rpm}
+            mv *{.pkg.tar.zst, -musl.pkg.tar.zst}
+            mv *{.apk, -musl.apk}
+
+            mkdir -p out && mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
+          else 
+            mkdir -p out && mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
