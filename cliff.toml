@@ -7,56 +7,74 @@ All notable changes to this release will be documented in here.
 """
 body = """
 {% set repo_url = "https://github.com/" ~ remote.github.owner ~ "/" ~ remote.github.repo %}
+
 {% for group, group_commits in commits | group_by(attribute="group") %}
     {% set group_clean = group | striptags | trim %}
+
     {% if group_clean == "Other Commits" %}
-<details>
-<summary>Other Commits ({{ group_commits | length }})</summary>
-{% for commit in group_commits %}
-* {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
-{% if commit.remote.pr_number %}
-  ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
-{% else %}
-  ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
-{% endif %}
-{% endfor %}
-</details>
+        <details>
+            <summary>Other Commits ({{ group_commits | length }})</summary>
+
+            {% for commit in group_commits %}
+                * {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
+                {% if commit.remote.pr_number %}
+                    ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
+                {% else %}
+                    ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
+                {% endif %}
+            {% endfor %}
+        </details>
+
     {% else %}
-    {% set group_name = group | striptags | trim | upper_first %}
-    ### {{ group_name }}
-    {% for commit in group_commits %}
-        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
-            {% if commit.breaking %}[**breaking**] {% endif %}\
-            {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
-            {% if commit.remote.pr_number %}
-            ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
-            {% else %}
-            ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
-            {% endif %}            {%- if commit.body and commit.body | trim != "" %}{% for line in commit.body | trim | split(pat="\n") -%}{% if line | trim != "" %}
-> {{ line | trim }}{% endif %}{% endfor %}{% elif commit.message | split(pat="\n") | length > 1 %}{% for line in commit.message | split(pat="\n") | slice(start=1) -%}{% if line | trim != "" %}
-> {{ line | trim }}{% endif %}{% endfor %}{% endif %}
-    {% endfor %}
+        {% set group_name = group | striptags | trim | upper_first %}
+
+        ### {{ group_name }}
+
+        {% for commit in group_commits %}
+            - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+              {% if commit.breaking %}[**breaking**] {% endif %}\
+              {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
+              {% if commit.remote.pr_number %}
+                  ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
+              {% else %}
+                  ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
+              {% endif %}
+
+              {% if commit.body and commit.body | trim != "" %}
+                  {% for line in commit.body | trim | split(pat="\n") %}
+                      {% if line | trim != "" %}
+> {{ line | trim }}
+                      {% endif %}
+                  {% endfor %}
+              {% elif commit.message | split(pat="\n") | length > 1 %}
+                  {% for line in commit.message | split(pat="\n") | slice(start=1) %}
+                      {% if line | trim != "" %}
+> {{ line | trim }}
+                      {% endif %}
+                  {% endfor %}
+              {% endif %}
+        {% endfor %}
+
     {% endif %}
 {% endfor %}
+
 {% if github.contributors %}
     {% set first_time = github.contributors | filter(attribute="is_first_time", value=true) %}
+
     {% if first_time | length > 0 %}
-### New Contributors
-    {% for contributor in first_time %}
-        {% if contributor.pr_number %}
-* @{{ contributor.username }} made their first contribution in #{{ contributor.pr_number }}
-        {% else %}
-* @{{ contributor.username }} made their first contribution
-        {% endif %}
-    {% endfor %}
+        ### New Contributors
+
+        {% for contributor in first_time %}
+            {% if contributor.pr_number %}
+                * [@{{ contributor.username }}](https://github.com/{{ contributor.username }}) made their first contribution in #{{ contributor.pr_number }}
+            {% else %}
+                * [@{{ contributor.username }}](https://github.com/{{ contributor.username }}) made their first contribution
+            {% endif %}
+        {% endfor %}
     {% endif %}
 {% endif %}
 """
 trim = true
-postprocessors = [
-  { pattern = '<REPO>', replace = "https://github.com/abdullah-albanna/rusbmux" },
-  { pattern = '(?m)^> ', replace = '  > ' },
-]
 
 [git]
 conventional_commits = true
@@ -71,7 +89,9 @@ commit_preprocessors = [
   { pattern = '^chore\(release', replace = '[internal] $0' },
   { pattern = '^\.$', replace = '[internal] .' },
   { pattern = '^Merge (pull request|branch)', replace = '[internal] $0' },
-  { pattern = '\(#(\d+)', replace = "([#${1}](<REPO>/issues/${1}))" },
+
+  # remove the pr number at the end of a commit
+  { pattern = '\s*\(#(\d+)\)$', replace = '' },
 ]
 commit_parsers = [
   { message = "^\\[internal\\]", skip = true },
@@ -90,11 +110,8 @@ commit_parsers = [
   { body = ".*security", group = "<!-- 11 -->Security" },
   { message = ".*", group = "<!-- 12 -->Other Commits" },
 ]
-link_parsers = [
-  { pattern = "#(\\d+)", text = "#$1", href = "https://github.com/abdullah-albanna/rusbmux/issues/$1" },
-]
 topo_order_commits = true
-sort_commits = "oldest"
+sort_commits = "newest"
 
 [remote.github]
 owner = "abdullah-albanna"
