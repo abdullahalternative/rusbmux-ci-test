@@ -16,12 +16,12 @@ body = """
             <summary>Other Commits ({{ group_commits | length }})</summary>
 
             {% for commit in group_commits %}
-                * {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
-                {% if commit.remote.pr_number %}
-                    ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
-                {% else %}
-                    ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
-                {% endif %}
+                * {{ commit.message | split(pat="\n") | first | trim | upper_first }} \
+                {% if commit.remote.pr_number %}\
+                  ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))\
+                {% else %}\
+                  ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
+                {%- endif %}
             {% endfor %}
         </details>
 
@@ -33,23 +33,22 @@ body = """
         {% for commit in group_commits %}
             - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
               {% if commit.breaking %}[**breaking**] {% endif %}\
-              {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
-              {% if commit.remote.pr_number %}
-                  ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))
-              {% else %}
-                  ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }}))
-              {% endif %}
+              {{ commit.message | split(pat="\n") | first | trim | upper_first }} \
+              {% if commit.remote.pr_number %}\
+                ([#{{ commit.remote.pr_number }}]({{ repo_url }}/pull/{{ commit.remote.pr_number }}))\
+              {% else %}\
+                ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo_url }}/commit/{{ commit.id }})){%- endif %}
 
               {% if commit.body and commit.body | trim != "" %}
                   {% for line in commit.body | trim | split(pat="\n") %}
                       {% if line | trim != "" %}
-> {{ line | trim }}
+                        > {{ line | trim }}
                       {% endif %}
                   {% endfor %}
               {% elif commit.message | split(pat="\n") | length > 1 %}
                   {% for line in commit.message | split(pat="\n") | slice(start=1) %}
                       {% if line | trim != "" %}
-> {{ line | trim }}
+                        > {{ line | trim }}
                       {% endif %}
                   {% endfor %}
               {% endif %}
@@ -66,7 +65,7 @@ body = """
 
         {% for contributor in first_time %}
             {% if contributor.pr_number %}
-                * [@{{ contributor.username }}](https://github.com/{{ contributor.username }}) made their first contribution in #{{ contributor.pr_number }}
+                * [@{{ contributor.username }}](https://github.com/{{ contributor.username }}) made their first contribution in [#{{ contributor.pr_number }}]({{ repo_url }}/pull/{{ contributor.pr_number }})
             {% else %}
                 * [@{{ contributor.username }}](https://github.com/{{ contributor.username }}) made their first contribution
             {% endif %}
@@ -75,6 +74,7 @@ body = """
 {% endif %}
 """
 trim = true
+postprocessors = [{ pattern = '(?m)^> ', replace = '  > ' }]
 
 [git]
 conventional_commits = true
