@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Check whether the version in Cargo.toml has
+  # check whether the version in Cargo.toml has
   # changed (push) or if this is a manual run.
   version-check:
     runs-on: ubuntu-latest
@@ -48,6 +48,8 @@ jobs:
     env:
       CARGO_TARGET_DIR: D:\a\rusbmux\target
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Rust for windows-x86_64
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -57,8 +59,6 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.10.0"
-
-      - uses: actions/checkout@v4
 
       - name: Build rusbmux
         env:
@@ -87,7 +87,7 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\rusbmux-setup.iss
+          ISCC.exe windows\rusbmux-setup.iss
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -104,7 +104,7 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             name: linux-amd64
-            libc: glic
+            libc: glibc
 
           - target: x86_64-unknown-linux-musl
             name: linux-amd64-musl
@@ -112,6 +112,8 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Rust for ${{ matrix.name }}
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -121,8 +123,6 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.10.0"
-
-      - uses: actions/checkout@v4
 
       - name: Install musl tools (musl target only)
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -189,8 +189,6 @@ jobs:
               --provides usbmuxd \
               --replaces usbmuxd \
               --conflicts usbmuxd \
-              --deb-dist stable \
-              --rpm-dist stable \
               $DEPS \
               $SYSTEMD \
               $BIN=/usr/bin/rusbmux \
@@ -230,6 +228,8 @@ jobs:
             name: macos-aarch64
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Rust for ${{ matrix.name }}
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -239,11 +239,6 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.10.0"
-
-      - uses: actions/checkout@v4
-
-      - name: Install Rust target
-        run: rustup target add ${{ matrix.target }}
 
       - name: Build
         env:
@@ -291,7 +286,7 @@ jobs:
             exit 0
           fi
 
-          git cliff --config cliff.toml --unreleased \
+          git cliff --config .github/cliff.toml --unreleased \
             --github-repo "${{ github.repository }}" > release_body.md
 
       - name: Download all artifacts
