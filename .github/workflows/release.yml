@@ -218,7 +218,7 @@ jobs:
           mkdir -p out
 
           while IFS='|' read -r TARGET NAME ARCH LIBC; do 
-            cross build --release --target "$TARGET"
+            cargo cross build --release --target "$TARGET"
 
             cp "target/$TARGET/release/rusbmux" "rusbmux-$NAME"
             chmod +x "rusbmux-$NAME"
