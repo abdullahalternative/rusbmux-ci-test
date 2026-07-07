@@ -343,49 +343,49 @@ jobs:
           DEB_X86_64="$BASE/rusbmux_${VER}_amd64.deb"
           DEB_X86_64_STATIC="$BASE/rusbmux_${VER}_amd64-musl.deb"
 
-          RPM_X86_64="$BASE/rusbmux_${VER}-1_x86_64.rpm"
-          RPM_X86_64_STATIC="$BASE/rusbmux_${VER}-1_x86_64-musl.rpm"
+          RPM_X86_64="$BASE/rusbmux-${VER}-1.x86_64.rpm"
+          RPM_X86_64_STATIC="$BASE/rusbmux-${VER}-1.x86_64-musl.rpm"
 
-          PKG_X86_64="$BASE/rusbmux_${VER}-1_x86_64.pkg.tar.zst"
-          PKG_X86_64_STATIC="$BASE/rusbmux_${VER}-1_x86_64-musl.pkg.tar.zst"
+          PKG_X86_64="$BASE/rusbmux-${VER}-1-x86_64.pkg.tar.zst"
+          PKG_X86_64_STATIC="$BASE/rusbmux-${VER}-1-x86_64-musl.pkg.tar.zst"
 
-          APK_X86_64="$BASE/rusbmux_${VER}_x86_64.apk"
+          APK_X86_64="$BASE/rusbmux_${VER}_x86_64-musl.apk"
           MACOS_X86_64="$BASE/rusbmux-macos-x86_64"
 
           DEB_AARCH64="$BASE/rusbmux_${VER}_arm64.deb"
           DEB_AARCH64_STATIC="$BASE/rusbmux_${VER}_arm64-musl.deb"
 
-          RPM_AARCH64="$BASE/rusbmux_${VER}-1_aarch64.rpm"
-          RPM_AARCH64_STATIC="$BASE/rusbmux_${VER}-1_aarch64-musl.rpm"
+          RPM_AARCH64="$BASE/rusbmux-${VER}-1.aarch64.rpm"
+          RPM_AARCH64_STATIC="$BASE/rusbmux-${VER}-1.aarch64-musl.rpm"
 
-          PKG_AARCH64="$BASE/rusbmux_${VER}-1_aarch64.pkg.tar.zst"
-          PKG_AARCH64_STATIC="$BASE/rusbmux_${VER}-1_aarch64-musl.pkg.tar.zst"
+          PKG_AARCH64="$BASE/rusbmux-${VER}-1-aarch64.pkg.tar.zst"
+          PKG_AARCH64_STATIC="$BASE/rusbmux-${VER}-1-aarch64-musl.pkg.tar.zst"
 
-          APK_AARCH64="$BASE/rusbmux_${VER}_aarch64.apk"
+          APK_AARCH64="$BASE/rusbmux_${VER}_aarch64-musl.apk"
           MACOS_AARCH64="$BASE/rusbmux-macos-aarch64"
 
           DEB_ARMV7="$BASE/rusbmux_${VER}_armv7.deb"
           DEB_ARMV7_STATIC="$BASE/rusbmux_${VER}_armv7-musl.deb"
 
-          PKG_ARMV7="$BASE/rusbmux_${VER}-1_armv7.pkg.tar.zst"
-          PKG_ARMV7_STATIC="$BASE/rusbmux_${VER}-1_armv7-musl.pkg.tar.zst"
+          PKG_ARMV7="$BASE/rusbmux-${VER}-1-armv7.pkg.tar.zst"
+          PKG_ARMV7_STATIC="$BASE/rusbmux-${VER}-1-armv7-musl.pkg.tar.zst"
 
-          APK_ARMV7="$BASE/rusbmux_${VER}_armv7.apk"
+          APK_ARMV7="$BASE/rusbmux_${VER}_armv7-musl.apk"
 
           DEB_X86="$BASE/rusbmux_${VER}_x86.deb"
           DEB_X86_STATIC="$BASE/rusbmux_${VER}_x86-musl.deb"
 
-          APK_X86="$BASE/rusbmux_${VER}_x86.apk"
+          APK_X86="$BASE/rusbmux_${VER}_x86-musl.apk"
 
-          WINDOWS="$BASE/rusbmux-{$VER}-setup.exe"
+          WINDOWS="$BASE/rusbmux-${VER}-setup.exe"
 
           table=$(cat <<EOF
-          | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            ArchLinux                                                       |           Alpine                   |           macOS               |         Windows             |
+          | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            ArchLinux                                                        |           Alpine                   |           macOS               |         Windows             |
           | --------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------- | ----------------------------- | --------------------------- |
-          | x86-64 (64-bit) | [Download]($DEB_X86_64) [Download (Static)]($DEB_X86_64_STATIC)                     | [Download]($RPM_X86_64) [Download (Static)]($RPM_X86_64_STATIC)             | [Download]($PKG_X86_64) [Download (Static)]($PKG_X86_64_STATIC)             | [Download]($APK_X86_64)            | [Download]($MACOS_X86_64)     |   [Download]($WINDOWS)      |
-          | AArch64 (ARM64) | [Download]($DEB_AARCH64) [Download (Static)]($DEB_AARCH64_STATIC)                   | [Download]($RPM_AARCH64) [Download (Static)]($RPM_AARCH64_STATIC)           | [Download]($PKG_AARCH64) [Download (Static)]($PKG_AARCH64_STATIC)           | [Download]($APK_AARCH64)           | [Download]($MACOS_AARCH64)    |                             |
-          | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) [Download (Static)]($DEB_ARMV7_STATIC)                       |                                                                             | [Download]($PKG_ARMV7) [Download (Static)]($PKG_ARMV7_STATIC)               | [Download]($APK_ARMV7)             |                               |                             |
-          | x86 (32-bit)    | [Download]($DEB_X86) [Download (Static)]($DEB_X86_STATIC)                           |                                                                             |                                                                             | [Download]($APK_X86)               |                               |                             |
+          | x86-64 (64-bit) | [Download]($DEB_X86_64) <br> <br> [Download (Static)]($DEB_X86_64_STATIC)           | [Download]($RPM_X86_64) <br> <br> [Download (Static)]($RPM_X86_64_STATIC)   | [Download]($PKG_X86_64) <br> <br> [Download (Static)]($PKG_X86_64_STATIC)   | [Download]($APK_X86_64)            | [Download]($MACOS_X86_64)     |   [Download]($WINDOWS)      |
+          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($PKG_AARCH64) <br> <br> [Download (Static)]($PKG_AARCH64_STATIC) | [Download]($APK_AARCH64)           | [Download]($MACOS_AARCH64)    |                             |
+          | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) <br> <br> [Download (Static)]($DEB_ARMV7_STATIC)             |                                                                             | [Download]($PKG_ARMV7) <br> <br> [Download (Static)]($PKG_ARMV7_STATIC)     | [Download]($APK_ARMV7)             |                               |                             |
+          | x86 (32-bit)    | [Download]($DEB_X86) <br> <br> [Download (Static)]($DEB_X86_STATIC)                 |                                                                             |                                                                             | [Download]($APK_X86)               |                               |                             |
           EOF
           )
 
