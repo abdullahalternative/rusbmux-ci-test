@@ -198,10 +198,11 @@ jobs:
       #     RUSTC_WRAPPER: "sccache"
       #   run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Install cross
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.20.0
+
+      - name: Install shawl
+        run: cargo binstall cargo-cross --no-confirm
 
       - name: Install fpm
         run: |
