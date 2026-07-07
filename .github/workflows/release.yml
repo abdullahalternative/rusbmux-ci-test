@@ -41,59 +41,59 @@ jobs:
           fi
 
   # Windows  –  rusbmux + USB driver + Inno Setup
-  # build-windows:
-  #   needs: version-check
-  #   if: needs.version-check.outputs.should_release == 'true'
-  #   runs-on: windows-latest
-  #   env:
-  #     CARGO_TARGET_DIR: D:\a\rusbmux\target
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Set up Rust for windows-x86_64
-  #       uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         targets: x86_64-pc-windows-msvc
-  #
-  #     - name: Setup sccache
-  #       uses: mozilla-actions/sccache-action@v0.0.10
-  #       with:
-  #         version: "v0.10.0"
-  #
-  #     - name: Build rusbmux
-  #       env:
-  #         RUSTFLAGS: "-C link-arg=/USECL:lld-link"
-  #         SCCACHE_GHA_ENABLED: "true"
-  #         RUSTC_WRAPPER: "sccache"
-  #       run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin
-  #
-  #     - name: Build USB driver
-  #       env:
-  #         RUSTFLAGS: "-C link-arg=/USECL:lld-link"
-  #         SCCACHE_GHA_ENABLED: "true"
-  #         RUSTC_WRAPPER: "sccache"
-  #       run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
-  #
-  #     - name: Install cargo-binstall
-  #       uses: cargo-bins/cargo-binstall@v1.20.0
-  #
-  #     - name: Install shawl
-  #       run: cargo binstall shawl --no-confirm
-  #
-  #     - name: Install Inno Setup
-  #       shell: pwsh
-  #       run: choco install innosetup --no-progress -y
-  #
-  #     - name: Build installer
-  #       shell: pwsh
-  #       run: |
-  #         ISCC.exe windows\rusbmux-setup.iss
-  #
-  #     - name: Upload installer
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: windows-installer
-  #         path: windows/dist/rusbmux-*.exe
+  build-windows:
+    needs: version-check
+    if: needs.version-check.outputs.should_release == 'true'
+    runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: D:\a\rusbmux\target
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust for windows-x86_64
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.10.0"
+
+      - name: Build rusbmux
+        env:
+          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+        run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin
+
+      - name: Build USB driver
+        env:
+          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+        run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.20.0
+
+      - name: Install shawl
+        run: cargo binstall shawl --no-confirm
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          ISCC.exe windows\rusbmux-setup.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: windows/dist/rusbmux-*.exe
 
   # Linux  –  glibc + musl (fully static)
   build-linux:
@@ -149,53 +149,23 @@ jobs:
             libc: glibc
 
     runs-on: ubuntu-latest
-    # env:
-    #   VERSION: ${{ needs.version-check.outputs.version }}
-    #   TARGETS: |
-    #     x86_64-unknown-linux-gnu|linux-x86_64|x86_64|glibc
-    #     x86_64-unknown-linux-musl|linux-x86_64-musl|x86_64|musl
-    #     i686-unknown-linux-gnu|linux-x86|x86|glibc
-    #     i686-unknown-linux-musl|linux-x86-musl|x86|musl
-    #     armv7-unknown-linux-gnueabihf|linux-armv7|armv7|glibc
-    #     armv7-unknown-linux-musleabihf|linux-armv7-musl|armv7|musl
-    #     aarch64-unknown-linux-musl|linux-aarch64-musl|aarch64|musl
-    #     aarch64-unknown-linux-gnu|linux-aarch64|aarch64|glibc
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Rust for ${{ matrix.name }}
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: >
-            x86_64-unknown-linux-gnu x86_64-unknown-linux-musl
-            i686-unknown-linux-gnu i686-unknown-linux-musl
-            armv7-unknown-linux-gnueabihf armv7-unknown-linux-musleabihf
-            aarch64-unknown-linux-musl aarch64-unknown-linux-gnu
-
-      # - name: Set up Rust
-      #    uses: dtolnay/rust-toolchain@stable
-      #    with:
-      #      targets: >
-      #        x86_64-unknown-linux-gnu x86_64-unknown-linux-musl
-      #        i686-unknown-linux-gnu i686-unknown-linux-musl
-      #        armv7-unknown-linux-gnueabihf armv7-unknown-linux-musleabihf
-      #        aarch64-unknown-linux-musl aarch64-unknown-linux-gnu
+          targets: ${{ matrix.target }}
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.10.0"
 
-      # - name: Install musl tools (musl target only)
-      #   if: matrix.target == 'x86_64-unknown-linux-musl'
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y musl-tools
-
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.20.0
 
-      - name: Install shawl
+      - name: Install cargo-cross
         run: cargo binstall cargo-cross --no-confirm
 
       - name: Build
@@ -203,78 +173,6 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
         run: cargo cross build --release --target ${{ matrix.target }}
-
-      - name: Install fpm
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ruby rpm libarchive-tools rename
-          sudo gem install fpm --no-document
-
-      # - name: Build all
-      #   env:
-      #     SCCACHE_GHA_ENABLED: "true"
-      #     RUSTC_WRAPPER: "sccache"
-      #   run: |
-      #     set -euo pipefail
-      #     mkdir -p out
-      #
-      #     while IFS='|' read -r TARGET NAME ARCH LIBC; do
-      #       cargo cross build --release --target "$TARGET"
-      #
-      #       cp "target/$TARGET/release/rusbmux" "rusbmux-$NAME"
-      #       chmod +x "rusbmux-$NAME"
-      #
-      #       BIN="rusbmux-$NAME"
-      #
-      #       for fmt in deb rpm pacman apk; do
-      #         DEPS=""
-      #         SYSTEMD=""
-      #         SYSTEMD_PATH=""
-      #
-      #         [ "$LIBC" = "glibc" ] && DEPS="--depends glibc --depends gcc-libs"
-      #
-      #         if [ "$fmt" = "deb" ]; then
-      #           SYSTEMD="--deb-systemd systemd/rusbmux.service --deb-systemd-enable"
-      #         else
-      #           SYSTEMD_PATH="systemd/rusbmux.service=/usr/lib/systemd/system/rusbmux.service"
-      #         fi
-      #
-      #         [ "$fmt" = "apk" ] && SYSTEMD="" && SYSTEMD_PATH=""
-      #
-      #         fpm -t "$fmt" -s dir \
-      #           -n rusbmux \
-      #           -v "$VERSION" \
-      #           --architecture "$ARCH" \
-      #           --license "MIT OR Apache-2.0" \
-      #           --maintainer "Abdullah Al-Banna <abdu.albanna@proton.me>" \
-      #           --url "https://github.com/abdullah-albanna/rusbmux" \
-      #           --description "A usbmuxd replacement in pure Rust" \
-      #           --category net \
-      #           --provides rusbmux --provides usbmuxd \
-      #           --replaces usbmuxd --conflicts usbmuxd \
-      #           $DEPS \
-      #           $SYSTEMD \
-      #           $BIN=/usr/bin/rusbmux \
-      #           $SYSTEMD_PATH \
-      #           README.md=/usr/share/doc/rusbmux/README.md \
-      #           LICENSE-MIT=/usr/share/licenses/rusbmux/LICENSE-MIT \
-      #           LICENSE-APACHE=/usr/share/licenses/rusbmux/LICENSE-APACHE \
-      #           THIRD_PARTY_LICENSES.txt=/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt
-      #       done
-      #
-      #       if [ "$LIBC" = "musl" ]; then
-      #         rename 's/(\.pkg\.tar\.zst|\.deb|\.rpm|\.apk)$/-musl$1/' \
-      #           *.deb *.rpm *.pkg.tar.zst *.apk 2>/dev/null || true
-      #       fi
-      #
-      #       mv *.deb *.rpm *.pkg.tar.zst *.apk out/ 2>/dev/null || true
-      #
-      #     done <<< "$TARGETS"
-      #
-      - name: Rename bins
-        run: |
-          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
-          chmod +x "rusbmux-${{ matrix.name }}"
 
       - name: Install fpm
         run: |
@@ -290,6 +188,17 @@ jobs:
           BIN="target/${{ matrix.target }}/release/rusbmux"
 
           for fmt in deb rpm pacman apk; do
+
+            # alpine uses musl only by default
+            #
+            # there's a workaround, but including only musl is probably better
+            [ "$fmt" = "apk" ] && [ "${{ matrix.libc }}" = "glibc" ] && continue
+
+            # archlinux dropped x86
+            [ "$fmt" = "pacman" ] && [ "${{ matrix.arch }}" = "x86" ] && continue
+
+            # dropped since fedora 37
+            [ "$fmt" = "rpm" ] && [ "${{ matrix.arch }}" = "x86" -o "${{ matrix.arch }}" = "armv7" ] && continue
 
             DEPS=""
             SYSTEMD=""
@@ -349,54 +258,54 @@ jobs:
           name: rusbmux-${{ matrix.name }}
           path: out/*
 
-  # # macOS  –  Intel  +  Apple Silicon
-  # build-macos:
-  #   needs: version-check
-  #   if: needs.version-check.outputs.should_release == 'true'
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - target: x86_64-apple-darwin
-  #           name: macos-x86_64
-  #         - target: aarch64-apple-darwin
-  #           name: macos-aarch64
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Set up Rust for ${{ matrix.name }}
-  #       uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         targets: ${{ matrix.target }}
-  #
-  #     - name: Setup sccache
-  #       uses: mozilla-actions/sccache-action@v0.0.10
-  #       with:
-  #         version: "v0.10.0"
-  #
-  #     - name: Build
-  #       env:
-  #         SCCACHE_GHA_ENABLED: "true"
-  #         RUSTC_WRAPPER: "sccache"
-  #       run: cargo build --release --target ${{ matrix.target }}
-  #
-  #     - name: Rename & upload binary
-  #       run: |
-  #         cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
-  #         chmod +x "rusbmux-${{ matrix.name }}"
-  #
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: rusbmux-${{ matrix.name }}
-  #         path: rusbmux-${{ matrix.name }}
+  # macOS  –  Intel  +  Apple Silicon
+  build-macos:
+    needs: version-check
+    if: needs.version-check.outputs.should_release == 'true'
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            name: macos-x86_64
+          - target: aarch64-apple-darwin
+            name: macos-aarch64
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust for ${{ matrix.name }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.10.0"
+
+      - name: Build
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename & upload binary
+        run: |
+          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
+          chmod +x "rusbmux-${{ matrix.name }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rusbmux-${{ matrix.name }}
+          path: rusbmux-${{ matrix.name }}
 
   # Release  –  collect artifacts + publish
   create-release:
     needs:
       - version-check
-      # - build-windows
+      - build-windows
       - build-linux
-      # - build-macos
+      - build-macos
     if: needs.version-check.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -422,6 +331,65 @@ jobs:
 
           git cliff --config .github/cliff.toml --unreleased \
             --github-repo "${{ github.repository }}" > release_body.md
+
+      - name: Prepend download table
+        env:
+          TAG: v${{ needs.version-check.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          BASE="https://github.com/$REPO/releases/download/$TAG"
+          VER="${TAG#v}"
+
+          DEB_X86_64="$BASE/rusbmux_${VER}_amd64.deb"
+          DEB_X86_64_STATIC="$BASE/rusbmux_${VER}_amd64-musl.deb"
+
+          RPM_X86_64="$BASE/rusbmux_${VER}-1_x86_64.rpm"
+          RPM_X86_64_STATIC="$BASE/rusbmux_${VER}-1_x86_64-musl.rpm"
+
+          PKG_X86_64="$BASE/rusbmux_${VER}-1_x86_64.pkg.tar.zst"
+          PKG_X86_64_STATIC="$BASE/rusbmux_${VER}-1_x86_64-musl.pkg.tar.zst"
+
+          APK_X86_64="$BASE/rusbmux_${VER}_x86_64.apk"
+          MACOS_X86_64="$BASE/rusbmux-macos-x86_64"
+
+          DEB_AARCH64="$BASE/rusbmux_${VER}_arm64.deb"
+          DEB_AARCH64_STATIC="$BASE/rusbmux_${VER}_arm64-musl.deb"
+
+          RPM_AARCH64="$BASE/rusbmux_${VER}-1_aarch64.rpm"
+          RPM_AARCH64_STATIC="$BASE/rusbmux_${VER}-1_aarch64-musl.rpm"
+
+          PKG_AARCH64="$BASE/rusbmux_${VER}-1_aarch64.pkg.tar.zst"
+          PKG_AARCH64_STATIC="$BASE/rusbmux_${VER}-1_aarch64-musl.pkg.tar.zst"
+
+          APK_AARCH64="$BASE/rusbmux_${VER}_aarch64.apk"
+          MACOS_AARCH64="$BASE/rusbmux-macos-aarch64"
+
+          DEB_ARMV7="$BASE/rusbmux_${VER}_armv7.deb"
+          DEB_ARMV7_STATIC="$BASE/rusbmux_${VER}_armv7-musl.deb"
+
+          PKG_ARMV7="$BASE/rusbmux_${VER}-1_armv7.pkg.tar.zst"
+          PKG_ARMV7_STATIC="$BASE/rusbmux_${VER}-1_armv7-musl.pkg.tar.zst"
+
+          APK_ARMV7="$BASE/rusbmux_${VER}_armv7.apk"
+
+          DEB_X86="$BASE/rusbmux_${VER}_x86.deb"
+          DEB_X86_STATIC="$BASE/rusbmux_${VER}_x86-musl.deb"
+
+          APK_X86="$BASE/rusbmux_${VER}_x86.apk"
+
+          WINDOWS="$BASE/rusbmux-{$VER}-setup.exe"
+
+          table=$(cat <<EOF
+          | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            ArchLinux                                                       |           Alpine                   |           macOS               |         Windows             |
+          | --------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------- | ----------------------------- | --------------------------- |
+          | x86-64 (64-bit) | [Download]($DEB_X86_64) [Download (Static)]($DEB_X86_64_STATIC)                     | [Download]($RPM_X86_64) [Download (Static)]($RPM_X86_64_STATIC)             | [Download]($PKG_X86_64) [Download (Static)]($PKG_X86_64_STATIC)             | [Download]($APK_X86_64)            | [Download]($MACOS_X86_64)     |   [Download]($WINDOWS)      |
+          | AArch64 (ARM64) | [Download]($DEB_AARCH64) [Download (Static)]($DEB_AARCH64_STATIC)                   | [Download]($RPM_AARCH64) [Download (Static)]($RPM_AARCH64_STATIC)           | [Download]($PKG_AARCH64) [Download (Static)]($PKG_AARCH64_STATIC)           | [Download]($APK_AARCH64)           | [Download]($MACOS_AARCH64)    |                             |
+          | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) [Download (Static)]($DEB_ARMV7_STATIC)                       |                                                                             | [Download]($PKG_ARMV7) [Download (Static)]($PKG_ARMV7_STATIC)               | [Download]($APK_ARMV7)             |                               |                             |
+          | x86 (32-bit)    | [Download]($DEB_X86) [Download (Static)]($DEB_X86_STATIC)                           |                                                                             |                                                                             | [Download]($APK_X86)               |                               |                             |
+          EOF
+          )
+
+          printf "%s\n\n%s\n" "$table" "$(cat release_body.md)" > release_body.md
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
