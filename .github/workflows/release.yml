@@ -44,16 +44,29 @@ jobs:
   build-windows:
     needs: version-check
     if: needs.version-check.outputs.should_release == 'true'
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            name: win-x86_64
+            arch: x86_64
+            os: windows-latest
+
+          - target: aarch64-pc-windows-msvc
+            name: win-arm64
+            arch: arm64
+            os: windows-11-arm
+
+    runs-on: ${{ matrix.os }}
     env:
-      CARGO_TARGET_DIR: D:\a\rusbmux\target
+      CARGO_TARGET_DIR: ${{ matrix.os == 'windows-latest' && 'D:\a\rusbmux\target' || 'C:\a\rusbmux\target' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Rust for windows-x86_64
+      - name: Set up Rust for windows-${{ matrix.arch }}
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: ${{ matrix.target }}
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.10
@@ -87,12 +100,16 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          ISCC.exe windows\rusbmux-setup.iss
+          if ("${{ matrix.os }}" -eq "windows-11-arm") {
+            ISCC.exe /dBuildARM64 windows\rusbmux-setup.iss
+          } else {
+            ISCC.exe windows\rusbmux-setup.iss
+          }
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
+          name: windows-installer-${{ matrix.name }}
           path: windows/dist/rusbmux-*.exe
 
   # Linux  –  glibc + musl (fully static)
@@ -377,13 +394,14 @@ jobs:
 
           APK_X86="$BASE/rusbmux_${VER}_x86-musl.apk"
 
-          WINDOWS="$BASE/rusbmux-${VER}-setup.exe"
+          WINDOWS_X86_64="$BASE/rusbmux-${VER}-x86_64-setup.exe"
+          WINDOWS_ARM64="$BASE/rusbmux-${VER}-arm64-setup.exe"
 
           table=$(cat <<EOF
           | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            ArchLinux                                                        |           Alpine                   |           macOS               |         Windows             |
           | --------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------- | ----------------------------- | --------------------------- |
-          | x86-64 (64-bit) | [Download]($DEB_X86_64) <br> <br> [Download (Static)]($DEB_X86_64_STATIC)           | [Download]($RPM_X86_64) <br> <br> [Download (Static)]($RPM_X86_64_STATIC)   | [Download]($PKG_X86_64) <br> <br> [Download (Static)]($PKG_X86_64_STATIC)   | [Download]($APK_X86_64)            | [Download]($MACOS_X86_64)     |   [Download]($WINDOWS)      |
-          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($PKG_AARCH64) <br> <br> [Download (Static)]($PKG_AARCH64_STATIC) | [Download]($APK_AARCH64)           | [Download]($MACOS_AARCH64)    |                             |
+          | x86-64 (64-bit) | [Download]($DEB_X86_64) <br> <br> [Download (Static)]($DEB_X86_64_STATIC)           | [Download]($RPM_X86_64) <br> <br> [Download (Static)]($RPM_X86_64_STATIC)   | [Download]($PKG_X86_64) <br> <br> [Download (Static)]($PKG_X86_64_STATIC)   | [Download]($APK_X86_64)            | [Download]($MACOS_X86_64)     | [Download]($WINDOWS_X86_64) |
+          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($PKG_AARCH64) <br> <br> [Download (Static)]($PKG_AARCH64_STATIC) | [Download]($APK_AARCH64)           | [Download]($MACOS_AARCH64)    | [Download]($WINDOWS_ARM64)  |
           | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) <br> <br> [Download (Static)]($DEB_ARMV7_STATIC)             |                                                                             | [Download]($PKG_ARMV7) <br> <br> [Download (Static)]($PKG_ARMV7_STATIC)     | [Download]($APK_ARMV7)             |                               |                             |
           | x86 (32-bit)    | [Download]($DEB_X86) <br> <br> [Download (Static)]($DEB_X86_STATIC)                 |                                                                             |                                                                             | [Download]($APK_X86)               |                               |                             |
           EOF

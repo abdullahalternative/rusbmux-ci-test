@@ -121,7 +121,14 @@ AppReadmeFile=https://github.com/abdullah-albanna/rusbmux/blob/main/README.md
 // a placeholder so Inno Setup creates the page, the content is replaced at runtime
 LicenseFile=..\LICENSE-MIT
 
-OutputBaseFilename={#AppName}-{#AppVersion}-setup
+#ifdef BuildARM64
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
+OutputBaseFilename={#AppName}-{#AppVersion}-arm64-setup
+#else
+OutputBaseFilename={#AppName}-{#AppVersion}-x86_64-setup
+#endif
+
 WizardStyle=dynamic
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
