@@ -150,7 +150,7 @@ jobs:
     #
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ needs.version-check.outputs.version }
+      VERSION: ${{ needs.version-check.outputs.version }}
       TARGETS: |
         x86_64-unknown-linux-gnu|linux-x86_64|x86_64|glibc
         x86_64-unknown-linux-musl|linux-x86_64-musl|x86_64|musl
