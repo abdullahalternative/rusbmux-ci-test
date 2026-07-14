@@ -47,23 +47,24 @@ install -m 644 %{_sourcedir}/THIRD_PARTY_LICENSES.txt %{buildroot}/usr/share/lic
 
 %post
 if systemctl --version >/dev/null 2>&1; then
-    systemctl daemon-reload
+    systemctl daemon-reload || true
     systemctl enable rusbmux || true
-    systemctl start rusbmux || true
+    systemctl restart rusbmux || true
 fi
 
 %preun
 if [ "$1" = 0 ]; then
     if systemctl --version >/dev/null 2>&1; then
-        systemctl stop rusbmux || true
-        systemctl disable rusbmux || true
+        systemctl disable --now rusbmux || true
     fi
 fi
 
 %postun
 if [ "$1" = 0 ]; then
-    rm -f /usr/lib/systemd/system/rusbmux.service
-    systemctl daemon-reload || true
+    if systemctl --version >/dev/null 2>&1; then
+      rm -f /usr/lib/systemd/system/rusbmux.service
+      systemctl daemon-reload || true
+    fi
 fi
 
 %changelog

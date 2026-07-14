@@ -3,11 +3,9 @@ set -e
 
 if [ "$1" = configure ]; then
   if systemctl --version >/dev/null 2>&1; then
-    mkdir -p /usr/lib/systemd/system/
-    cp /usr/share/doc/rusbmux/rusbmux.service /usr/lib/systemd/system/rusbmux.service
     systemctl daemon-reload || true
     systemctl enable rusbmux || true
-    systemctl start rusbmux || true
+    systemctl restart rusbmux || true
   fi
 fi
 
