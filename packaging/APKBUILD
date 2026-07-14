@@ -1,0 +1,37 @@
+# Maintainer: Abdullah Al-Banna <abdu.albanna@proton.me>
+
+pkgname=rusbmux
+pkgver=VERSION_PLACEHOLDER
+pkgrel=1
+pkgdesc="A usbmuxd replacement in pure Rust"
+url="https://github.com/abdullah-albanna/rusbmux"
+arch="ARCH_PLACEHOLDER"
+license="MIT OR Apache-2.0"
+depends=""
+makedepends="cargo rust"
+provides="usbmuxd"
+conflicts="usbmuxd"
+replaces="usbmuxd"
+subpackages=""
+options="!check !tracedeps !strip"
+
+source="rusbmux-$pkgver.tar.gz::https://github.com/abdullah-albanna/rusbmux/archive/v$pkgver.tar.gz"
+builddir="$srcdir/$pkgname-$pkgver"
+
+prepare() {
+    default_prepare
+}
+
+build() {
+    cargo build --release --no-default-features -F rusb,rusb-vendored,bin
+}
+
+package() {
+    install -Dm 755 target/release/rusbmux "$pkgdir"/usr/bin/rusbmux
+    install -Dm 644 README.md "$pkgdir"/usr/share/doc/rusbmux/README.md
+    install -Dm 644 LICENSE-MIT "$pkgdir"/usr/share/licenses/rusbmux/LICENSE-MIT
+    install -Dm 644 LICENSE-APACHE "$pkgdir"/usr/share/licenses/rusbmux/LICENSE-APACHE
+    install -Dm 644 THIRD_PARTY_LICENSES.txt "$pkgdir"/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt
+}
+
+sha512sums="SKIP"
