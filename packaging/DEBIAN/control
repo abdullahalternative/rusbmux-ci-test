@@ -4,7 +4,7 @@ Section: net
 Priority: optional
 Architecture: ARCH_PLACEHOLDER
 Maintainer: Abdullah Al-Banna <abdu.albanna@proton.me>
-Depends: libc6, libgcc-s1
+Depends: DEPENDS_PLACEHOLDER
 Recommends: systemd
 Provides: rusbmux, usbmuxd
 Conflicts: usbmuxd

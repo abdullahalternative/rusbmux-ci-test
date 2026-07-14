@@ -7,7 +7,11 @@ pkgdesc="A usbmuxd replacement in pure Rust"
 arch=('ARCH_PLACEHOLDER')
 url="https://github.com/abdullah-albanna/rusbmux"
 license=('MIT' 'Apache-2.0')
-depends=('glibc' 'gcc-libs')
+if [ "${LIBC:-}" = "musl" ]; then
+    depends=()
+else
+    depends=('glibc' 'gcc-libs')
+fi
 provides=('rusbmux' 'usbmuxd')
 conflicts=('usbmuxd')
 replaces=('usbmuxd')
