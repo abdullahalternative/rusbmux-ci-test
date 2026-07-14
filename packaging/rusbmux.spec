@@ -5,7 +5,7 @@ Summary:    A usbmuxd replacement in pure Rust
 License:    MIT OR Apache-2.0
 URL:        https://github.com/abdullah-albanna/rusbmux
 Vendor:     Abdullah Al-Banna <abdu.albanna@proton.me>
-Requires:   glibc, gcc-libs
+Requires:   glibc, libgcc
 Provides:   rusbmux
 Provides:   usbmuxd
 Obsoletes:  usbmuxd
