@@ -3,8 +3,8 @@ name: Build and Release
 on:
   workflow_dispatch:
   push:
-    branches: [main]
     paths: ["Cargo.toml"]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -256,8 +256,10 @@ jobs:
         include:
           - target: x86_64-apple-darwin
             name: macos-x86_64
+            arch: x86_64
           - target: aarch64-apple-darwin
             name: macos-aarch64
+            arch: aarch64
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -272,12 +274,6 @@ jobs:
         with:
           version: "v0.10.0"
 
-      - name: Build
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-        run: cargo build --release --target ${{ matrix.target }}
-
       - name: Install needed crates
         uses: taiki-e/install-action@v2
         with:
@@ -287,7 +283,13 @@ jobs:
       - name: Generate third party licenses file
         run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
 
-      - name: Build .pkg
+      - name: Build
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package .pkg
         run: |
           VERSION="${{ needs.version-check.outputs.version }}"
           mkdir -p pkgroot/usr/local/bin
@@ -301,12 +303,12 @@ jobs:
             --identifier com.abdullah-albanna.rusbmux \
             --version "$VERSION" \
             --install-location / \
-            "rusbmux-${{ matrix.name }}.pkg"
+            "rusbmux-$VERSION-${{ matrix.arch }}.pkg"
 
       - uses: actions/upload-artifact@v4
         with:
           name: rusbmux-${{ matrix.name }}
-          path: rusbmux-${{ matrix.name }}.pkg
+          path: rusbmux-*.pkg
 
   # Release  –  collect artifacts + publish
   create-release:
@@ -358,7 +360,7 @@ jobs:
           TAR_X86_64="$BASE/rusbmux-${VER}-x86_64.tar.gz"
           TAR_X86_64_STATIC="$BASE/rusbmux-${VER}-x86_64-musl.tar.gz"
 
-          MACOS_X86_64="$BASE/rusbmux-macos-x86_64.pkg"
+          MACOS_X86_64="$BASE/rusbmux-${VER}-x86_64.pkg"
           WINDOWS_X86_64="$BASE/rusbmux-${VER}-x86_64-setup.exe"
 
           DEB_AARCH64="$BASE/rusbmux_${VER}_arm64.deb"
@@ -370,7 +372,7 @@ jobs:
           TAR_AARCH64="$BASE/rusbmux-${VER}-aarch64.tar.gz"
           TAR_AARCH64_STATIC="$BASE/rusbmux-${VER}-aarch64-musl.tar.gz"
 
-          MACOS_AARCH64="$BASE/rusbmux-macos-aarch64.pkg"
+          MACOS_AARCH64="$BASE/rusbmux-${VER}-aarch64.pkg"
 
           DEB_ARMV7="$BASE/rusbmux_${VER}_armhf.deb"
           DEB_ARMV7_STATIC="$BASE/rusbmux_${VER}_armhf-musl.deb"
