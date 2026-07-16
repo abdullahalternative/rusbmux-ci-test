@@ -182,8 +182,8 @@ jobs:
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.20.0
 
-      - name: Install cargo-cross
-        run: cargo binstall cargo-cross --no-confirm
+      - name: Install needed crates
+        run: cargo binstall cargo-cross cargo-deb cargo-generate-rpm --no-confirm
 
       - name: Build
         env:
@@ -191,35 +191,34 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo cross build --release --target ${{ matrix.target }}
 
-      - name: Install native packaging tools
+      - name: Package deb
         run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev rpm libarchive-tools zstd
+          if [ "${{ matrix.libc }}" = "musl" ]; then
+            cargo deb --target ${{ matrix.target }} --no-build --variant musl -o out/
+          else
+            cargo deb --target ${{ matrix.target }} --no-build -o out/
+          fi
 
-      - name: Package
+      - name: Package rpm
+        if: matrix.arch != 'x86' && matrix.arch != 'armv7'
         run: |
-          set -e
+          if [ "${{ matrix.libc }}" = "musl" ]; then
+            cargo generate-rpm --target ${{ matrix.target }} --variant musl -o out/
+          else 
+            cargo generate-rpm --target ${{ matrix.target }} -o out/
+          fi
 
+      - name: Package tarball
+        run: |
           VERSION="${{ needs.version-check.outputs.version }}"
-          export BIN="target/${{ matrix.target }}/release/rusbmux"
-          export VERSION
-          export ARCH="${{ matrix.arch }}"
-          export OUTDIR="out"
-
-          for fmt in deb rpm pacman apk; do
-
-            # alpine uses musl only
-            [ "$fmt" = "apk" ] && [ "${{ matrix.libc }}" = "glibc" ] && continue
-
-            # archlinux dropped x86
-            [ "$fmt" = "pacman" ] && [ "${{ matrix.arch }}" = "x86" ] && continue
-
-            # dropped since fedora 37
-            [ "$fmt" = "rpm" ] && [ "${{ matrix.arch }}" = "x86" -o "${{ matrix.arch }}" = "armv7" ] && continue
-
-            bash packaging/package.sh "$fmt"
-
-          done
+          install -Dm 755 "target/${{ matrix.target }}/release/rusbmux" "out/rusbmux-$VERSION/usr/bin/rusbmux"
+          install -Dm 644 systemd/rusbmux.service "out/rusbmux-$VERSION/usr/lib/systemd/system/rusbmux.service"
+          install -Dm 644 README.md "out/rusbmux-$VERSION/usr/share/doc/rusbmux/README.md"
+          install -Dm 644 LICENSE-MIT "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/LICENSE-MIT"
+          install -Dm 644 LICENSE-APACHE "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/LICENSE-APACHE"
+          install -Dm 644 THIRD_PARTY_LICENSES.txt "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt"
+          tar czf "out/rusbmux-${VERSION}-${{ matrix.arch }}.tar.gz" -C out "rusbmux-$VERSION"
+          rm -rf "out/rusbmux-$VERSION"
 
       - name: Tag musl packages
         if: matrix.libc == 'musl'
@@ -229,8 +228,7 @@ jobs:
             case "$f" in
               *.deb)         mv "$f" "${f%.deb}-musl.deb" 2>/dev/null || true ;;
               *.rpm)         mv "$f" "${f%.rpm}-musl.rpm" 2>/dev/null || true ;;
-              *.pkg.tar.zst) mv "$f" "${f%.pkg.tar.zst}-musl.pkg.tar.zst" 2>/dev/null || true ;;
-              *.apk)         mv "$f" "${f%.apk}-musl.apk" 2>/dev/null || true ;;
+              *.tar.gz)         mv "$f" "${f%.tar.gz}-musl.tar.gz" 2>/dev/null || true ;;
             esac
           done
 
@@ -327,10 +325,9 @@ jobs:
           RPM_X86_64="$BASE/rusbmux-${VER}-1.x86_64.rpm"
           RPM_X86_64_STATIC="$BASE/rusbmux-${VER}-1.x86_64-musl.rpm"
 
-          PKG_X86_64="$BASE/rusbmux-${VER}-1-x86_64.pkg.tar.zst"
-          PKG_X86_64_STATIC="$BASE/rusbmux-${VER}-1-x86_64-musl.pkg.tar.zst"
+          TAR_X86_64="$BASE/rusbmux-${VER}-x86_64.tar.gz"
+          TAR_X86_64_STATIC="$BASE/rusbmux-${VER}-x86_64-musl.tar.gz"
 
-          APK_X86_64="$BASE/rusbmux-${VER}-r1-x86_64-musl.apk"
           MACOS_X86_64="$BASE/rusbmux-macos-x86_64"
           WINDOWS_X86_64="$BASE/rusbmux-${VER}-x86_64-setup.exe"
 
@@ -340,33 +337,31 @@ jobs:
           RPM_AARCH64="$BASE/rusbmux-${VER}-1.aarch64.rpm"
           RPM_AARCH64_STATIC="$BASE/rusbmux-${VER}-1.aarch64-musl.rpm"
 
-          PKG_AARCH64="$BASE/rusbmux-${VER}-1-aarch64.pkg.tar.zst"
-          PKG_AARCH64_STATIC="$BASE/rusbmux-${VER}-1-aarch64-musl.pkg.tar.zst"
+          TAR_AARCH64="$BASE/rusbmux-${VER}-aarch64.tar.gz"
+          TAR_AARCH64_STATIC="$BASE/rusbmux-${VER}-aarch64-musl.tar.gz"
 
-          APK_AARCH64="$BASE/rusbmux-${VER}-r1-aarch64-musl.apk"
           MACOS_AARCH64="$BASE/rusbmux-macos-aarch64"
           WINDOWS_ARM64="$BASE/rusbmux-${VER}-arm64-setup.exe"
 
           DEB_ARMV7="$BASE/rusbmux_${VER}_armhf.deb"
           DEB_ARMV7_STATIC="$BASE/rusbmux_${VER}_armhf-musl.deb"
 
-          PKG_ARMV7="$BASE/rusbmux-${VER}-1-armv7h.pkg.tar.zst"
-          PKG_ARMV7_STATIC="$BASE/rusbmux-${VER}-1-armv7h-musl.pkg.tar.zst"
-
-          APK_ARMV7="$BASE/rusbmux-${VER}-r1-armv7-musl.apk"
+          TAR_ARMV7="$BASE/rusbmux-${VER}-armv7.tar.gz"
+          TAR_ARMV7_STATIC="$BASE/rusbmux-${VER}-armv7-musl.tar.gz"
 
           DEB_X86="$BASE/rusbmux_${VER}_i386.deb"
           DEB_X86_STATIC="$BASE/rusbmux_${VER}_i386-musl.deb"
 
-          APK_X86="$BASE/rusbmux-${VER}-r1-x86-musl.apk"
+          TAR_X86="$BASE/rusbmux-${VER}-x86.tar.gz"
+          TAR_X86_STATIC="$BASE/rusbmux-${VER}-x86-musl.tar.gz"
 
           table=$(cat <<EOF
-          | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            ArchLinux                                                        |           Alpine                   |           macOS               |         Windows             |
-          | --------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------- | ----------------------------- | --------------------------- |
-          | x86-64 (64-bit) | [Download]($DEB_X86_64) <br> <br> [Download (Static)]($DEB_X86_64_STATIC)           | [Download]($RPM_X86_64) <br> <br> [Download (Static)]($RPM_X86_64_STATIC)   | [Download]($PKG_X86_64) <br> <br> [Download (Static)]($PKG_X86_64_STATIC)   | [Download]($APK_X86_64)            | [Download]($MACOS_X86_64)     | [Download]($WINDOWS_X86_64) |
-          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($PKG_AARCH64) <br> <br> [Download (Static)]($PKG_AARCH64_STATIC) | [Download]($APK_AARCH64)           | [Download]($MACOS_AARCH64)    | [Download]($WINDOWS_ARM64)  |
-          | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) <br> <br> [Download (Static)]($DEB_ARMV7_STATIC)             |                                                                             | [Download]($PKG_ARMV7) <br> <br> [Download (Static)]($PKG_ARMV7_STATIC)     | [Download]($APK_ARMV7)             |                               |                             |
-          | x86 (32-bit)    | [Download]($DEB_X86) <br> <br> [Download (Static)]($DEB_X86_STATIC)                 |                                                                             |                                                                             | [Download]($APK_X86)               |                               |                             |
+          | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            Tarball                                                          |           macOS               |         Windows             |
+          | --------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------- | --------------------------- |
+          | x86-64 (64-bit) | [Download]($DEB_X86_64) <br> <br> [Download (Static)]($DEB_X86_64_STATIC)           | [Download]($RPM_X86_64) <br> <br> [Download (Static)]($RPM_X86_64_STATIC)   | [Download]($TAR_X86_64) <br> <br> [Download (Static)]($TAR_X86_64_STATIC)   | [Download]($MACOS_X86_64)     | [Download]($WINDOWS_X86_64) |
+          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($TAR_AARCH64) <br> <br> [Download (Static)]($TAR_AARCH64_STATIC) | [Download]($MACOS_AARCH64)    | [Download]($WINDOWS_ARM64)  |
+          | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) <br> <br> [Download (Static)]($DEB_ARMV7_STATIC)             |                                                                             | [Download]($TAR_ARMV7) <br> <br> [Download (Static)]($TAR_ARMV7_STATIC)     |                               |                             |
+          | x86 (32-bit)    | [Download]($DEB_X86) <br> <br> [Download (Static)]($DEB_X86_STATIC)                 |                                                                             | [Download]($TAR_X86) <br> <br> [Download (Static)]($TAR_X86_STATIC)         |                               |                             |
           EOF
           )
 
