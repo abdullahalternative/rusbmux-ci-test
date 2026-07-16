@@ -73,14 +73,15 @@ jobs:
         with:
           version: "v0.10.0"
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.20.0
-
-      - name: Install shawl
-        run: cargo binstall shawl cargo-about --no-confirm
+      - name: Install needed crates
+        uses: taiki-e/install-action@v2
+        with:
+          tool: |
+            shawl
+            cargo-about
 
       - name: Generate third party licenses file
-        run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
+        run: cargo about generate about.hbs -o THIRD_PARTY_LICENSES
 
       - name: Build rusbmux
         env:
@@ -182,11 +183,14 @@ jobs:
         with:
           version: "v0.10.0"
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.20.0
-
       - name: Install needed crates
-        run: cargo binstall cargo-cross cargo-deb cargo-generate-rpm cargo-about --no-confirm
+        uses: taiki-e/install-action@v2
+        with:
+          tool: |
+            cargo-cross
+            cargo-deb
+            cargo-generate-rpm
+            cargo-about
 
       - name: Generate third party licenses file
         run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
@@ -274,11 +278,11 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.20.0
-
       - name: Install needed crates
-        run: cargo binstall cargo-about --no-confirm
+        uses: taiki-e/install-action@v2
+        with:
+          tool: |
+            cargo-about
 
       - name: Generate third party licenses file
         run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
@@ -288,11 +292,13 @@ jobs:
           VERSION="${{ needs.version-check.outputs.version }}"
           mkdir -p pkgroot/usr/local/bin
           mkdir -p pkgroot/usr/local/share/doc/rusbmux
+
           cp "target/${{ matrix.target }}/release/rusbmux" pkgroot/usr/local/bin/
           cp README.md LICENSE-MIT LICENSE-APACHE THIRD_PARTY_LICENSES \
             pkgroot/usr/local/share/doc/rusbmux/
+
           pkgbuild --root pkgroot \
-            --identifier com.rusbmux.pkg \
+            --identifier com.abdullah-albanna.rusbmux \
             --version "$VERSION" \
             --install-location / \
             "rusbmux-${{ matrix.name }}.pkg"
