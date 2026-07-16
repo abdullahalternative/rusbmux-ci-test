@@ -160,6 +160,7 @@ Name: "imitateappleservice"; Description: "Imitate the original Apple service (h
 Source: "..\README.md"; DestDir: "{app}"; Flags: isreadme
 Source: "..\LICENSE-MIT"; DestDir: "{app}";
 Source: "..\LICENSE-APACHE"; DestDir: "{app}";
+Source: "..\THIRD_PARTY_LICENSES"; DestDir: "{app}";
 
 // embedded license files for runtime display (combined in license page UI)
 Source: "..\LICENSE-MIT"; DestDir: "{tmp}"; Flags: dontcopy

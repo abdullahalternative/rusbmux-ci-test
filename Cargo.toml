@@ -122,8 +122,8 @@ assets = [
     "644",
   ],
   [
-    "THIRD_PARTY_LICENSES.txt",
-    "usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt",
+    "THIRD_PARTY_LICENSES",
+    "usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES",
     "644",
   ],
 ]
@@ -145,7 +145,7 @@ assets = [
   { source = "README.md", dest = "/usr/share/doc/rusbmux/README.md", mode = "644", doc = true },
   { source = "LICENSE-MIT", dest = "/usr/share/licenses/rusbmux/LICENSE-MIT", mode = "644" },
   { source = "LICENSE-APACHE", dest = "/usr/share/licenses/rusbmux/LICENSE-APACHE", mode = "644" },
-  { source = "THIRD_PARTY_LICENSES.txt", dest = "/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt", mode = "644" },
+  { source = "THIRD_PARTY_LICENSES", dest = "/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES", mode = "644" },
 ]
 provides.rusbmux = "*"
 provides.usbmuxd = "*"

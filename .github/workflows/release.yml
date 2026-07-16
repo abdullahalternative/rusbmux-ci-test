@@ -3,6 +3,7 @@ name: Build and Release
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths: ["Cargo.toml"]
 
 env:
@@ -72,6 +73,15 @@ jobs:
         with:
           version: "v0.10.0"
 
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.20.0
+
+      - name: Install shawl
+        run: cargo binstall shawl cargo-about --no-confirm
+
+      - name: Generate third party licenses file
+        run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
+
       - name: Build rusbmux
         env:
           RUSTFLAGS: "-C link-arg=/USECL:lld-link"
@@ -85,12 +95,6 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
-
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.20.0
-
-      - name: Install shawl
-        run: cargo binstall shawl --no-confirm
 
       - name: Install Inno Setup
         shell: pwsh
@@ -182,7 +186,10 @@ jobs:
         uses: cargo-bins/cargo-binstall@v1.20.0
 
       - name: Install needed crates
-        run: cargo binstall cargo-cross cargo-deb cargo-generate-rpm --no-confirm
+        run: cargo binstall cargo-cross cargo-deb cargo-generate-rpm cargo-about --no-confirm
+
+      - name: Generate third party licenses file
+        run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
 
       - name: Build
         env:
@@ -215,7 +222,7 @@ jobs:
           install -Dm 644 README.md "out/rusbmux-$VERSION/usr/share/doc/rusbmux/README.md"
           install -Dm 644 LICENSE-MIT "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/LICENSE-MIT"
           install -Dm 644 LICENSE-APACHE "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/LICENSE-APACHE"
-          install -Dm 644 THIRD_PARTY_LICENSES.txt "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES.txt"
+          install -Dm 644 THIRD_PARTY_LICENSES "out/rusbmux-$VERSION/usr/share/licenses/rusbmux/THIRD_PARTY_LICENSES"
           tar czf "out/rusbmux-${VERSION}-${{ matrix.arch }}.tar.gz" -C out "rusbmux-$VERSION"
           rm -rf "out/rusbmux-$VERSION"
 
@@ -267,15 +274,33 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename & upload binary
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.20.0
+
+      - name: Install needed crates
+        run: cargo binstall cargo-about --no-confirm
+
+      - name: Generate third party licenses file
+        run: cargo about generate about.hbs > THIRD_PARTY_LICENSES
+
+      - name: Build .pkg
         run: |
-          cp "target/${{ matrix.target }}/release/rusbmux" "rusbmux-${{ matrix.name }}"
-          chmod +x "rusbmux-${{ matrix.name }}"
+          VERSION="${{ needs.version-check.outputs.version }}"
+          mkdir -p pkgroot/usr/local/bin
+          mkdir -p pkgroot/usr/local/share/doc/rusbmux
+          cp "target/${{ matrix.target }}/release/rusbmux" pkgroot/usr/local/bin/
+          cp README.md LICENSE-MIT LICENSE-APACHE THIRD_PARTY_LICENSES \
+            pkgroot/usr/local/share/doc/rusbmux/
+          pkgbuild --root pkgroot \
+            --identifier com.rusbmux.pkg \
+            --version "$VERSION" \
+            --install-location / \
+            "rusbmux-${{ matrix.name }}.pkg"
 
       - uses: actions/upload-artifact@v4
         with:
           name: rusbmux-${{ matrix.name }}
-          path: rusbmux-${{ matrix.name }}
+          path: rusbmux-${{ matrix.name }}.pkg
 
   # Release  –  collect artifacts + publish
   create-release:
@@ -327,7 +352,7 @@ jobs:
           TAR_X86_64="$BASE/rusbmux-${VER}-x86_64.tar.gz"
           TAR_X86_64_STATIC="$BASE/rusbmux-${VER}-x86_64-musl.tar.gz"
 
-          MACOS_X86_64="$BASE/rusbmux-macos-x86_64"
+          MACOS_X86_64="$BASE/rusbmux-macos-x86_64.pkg"
           WINDOWS_X86_64="$BASE/rusbmux-${VER}-x86_64-setup.exe"
 
           DEB_AARCH64="$BASE/rusbmux_${VER}_arm64.deb"
@@ -339,8 +364,7 @@ jobs:
           TAR_AARCH64="$BASE/rusbmux-${VER}-aarch64.tar.gz"
           TAR_AARCH64_STATIC="$BASE/rusbmux-${VER}-aarch64-musl.tar.gz"
 
-          MACOS_AARCH64="$BASE/rusbmux-macos-aarch64"
-          WINDOWS_ARM64="$BASE/rusbmux-${VER}-arm64-setup.exe"
+          MACOS_AARCH64="$BASE/rusbmux-macos-aarch64.pkg"
 
           DEB_ARMV7="$BASE/rusbmux_${VER}_armhf.deb"
           DEB_ARMV7_STATIC="$BASE/rusbmux_${VER}_armhf-musl.deb"
@@ -358,7 +382,7 @@ jobs:
           | Architecture    |            Debian/Ubuntu                                                            |                      Fedora                                                 |            Tarball                                                          |           macOS               |         Windows             |
           | --------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------- | --------------------------- |
           | x86-64 (64-bit) | [Download]($DEB_X86_64) <br> <br> [Download (Static)]($DEB_X86_64_STATIC)           | [Download]($RPM_X86_64) <br> <br> [Download (Static)]($RPM_X86_64_STATIC)   | [Download]($TAR_X86_64) <br> <br> [Download (Static)]($TAR_X86_64_STATIC)   | [Download]($MACOS_X86_64)     | [Download]($WINDOWS_X86_64) |
-          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($TAR_AARCH64) <br> <br> [Download (Static)]($TAR_AARCH64_STATIC) | [Download]($MACOS_AARCH64)    | [Download]($WINDOWS_ARM64)  |
+          | AArch64 (ARM64) | [Download]($DEB_AARCH64) <br> <br> [Download (Static)]($DEB_AARCH64_STATIC)         | [Download]($RPM_AARCH64) <br> <br> [Download (Static)]($RPM_AARCH64_STATIC) | [Download]($TAR_AARCH64) <br> <br> [Download (Static)]($TAR_AARCH64_STATIC) | [Download]($MACOS_AARCH64)    |                             |
           | ARMv7 (32-bit)  | [Download]($DEB_ARMV7) <br> <br> [Download (Static)]($DEB_ARMV7_STATIC)             |                                                                             | [Download]($TAR_ARMV7) <br> <br> [Download (Static)]($TAR_ARMV7_STATIC)     |                               |                             |
           | x86 (32-bit)    | [Download]($DEB_X86) <br> <br> [Download (Static)]($DEB_X86_STATIC)                 |                                                                             | [Download]($TAR_X86) <br> <br> [Download (Static)]($TAR_X86_STATIC)         |                               |                             |
           EOF
