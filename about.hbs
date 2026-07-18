@@ -7,7 +7,9 @@ in the rusbmux distribution.
 {{#each licenses}}
 {{name}}
 {{#each used_by}}
+  {{#unless (eq crate.name "rusbmux")}}
   - {{crate.name}} {{crate.version}}
+  {{/unless}}
 {{/each}}
 --------------------------------------------------------------------------------
 {{{text}}}

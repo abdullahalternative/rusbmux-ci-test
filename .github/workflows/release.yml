@@ -294,12 +294,18 @@ jobs:
           VERSION="${{ needs.version-check.outputs.version }}"
           mkdir -p pkgroot/usr/local/bin
           mkdir -p pkgroot/usr/local/share/doc/rusbmux
+          mkdir -p pkgroot/Library/LaunchDaemons
 
           cp "target/${{ matrix.target }}/release/rusbmux" pkgroot/usr/local/bin/
+
+          cp launchctl/com.abdullah-albanna.rusbmux.plist \
+                pkgroot/Library/LaunchDaemons/
+
           cp README.md LICENSE-MIT LICENSE-APACHE THIRD_PARTY_LICENSES \
             pkgroot/usr/local/share/doc/rusbmux/
 
           pkgbuild --root pkgroot \
+            --scripts launchctl/scripts/ \
             --identifier com.abdullah-albanna.rusbmux \
             --version "$VERSION" \
             --install-location / \
