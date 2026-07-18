@@ -7,26 +7,22 @@ use crate::{
     parser::usbmux::{UsbMuxMsgType, UsbMuxPacket, UsbMuxVersion},
 };
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 pub async fn handle_read_pair_record(
     writer: &mut impl AsyncWriting,
-    usbmux_packet: &UsbMuxPacket,
+    pair_record_id: String,
+    tag: u32,
 ) -> Result<(), RusbmuxError> {
-    if let Err(e) = read_pair_record(writer, usbmux_packet).await {
+    if let Err(e) = read_pair_record(writer, pair_record_id, tag).await {
         match e {
-            RusbmuxError::ValueNotFound("PairRecordID") => {
-                send_result(writer, ResultCode::InvalidInput, usbmux_packet.header.tag).await?;
+            RusbmuxError::UnexpectedPacket(_) => {
+                send_result(writer, ResultCode::BadCommand, tag).await?;
             }
             RusbmuxError::IO(ref e)
                 if matches!(e.kind(), ErrorKind::PermissionDenied | ErrorKind::NotFound) =>
             {
-                send_result(
-                    writer,
-                    ResultCode::BadDeviceOrNoSuchFile,
-                    usbmux_packet.header.tag,
-                )
-                .await?;
+                send_result(writer, ResultCode::BadDeviceOrNoSuchFile, tag).await?;
             }
             _ => {}
         }
@@ -39,26 +35,20 @@ pub async fn handle_read_pair_record(
 
 pub async fn read_pair_record(
     writer: &mut impl AsyncWriting,
-    usbmux_packet: &UsbMuxPacket,
+    pair_record_id: String,
+    tag: u32,
 ) -> Result<(), RusbmuxError> {
-    let tag = usbmux_packet.header.tag;
-
-    let pair_record_id = usbmux_packet
-        .payload
-        .as_plist()
-        .ok_or(RusbmuxError::UnexpectedPacket(
-            "Expected a packet with a plist payload".to_string(),
-        ))?
-        .as_dictionary()
-        .ok_or(RusbmuxError::UnexpectedPacket(
-            "Expected a packet with a dictionary plist payload".to_string(),
-        ))?
-        .get("PairRecordID")
-        .ok_or(RusbmuxError::ValueNotFound("PairRecordID"))?
-        .as_string()
-        .ok_or(RusbmuxError::InvalidData("PairRecordID is not a string"))?;
-
     trace!(tag, pair_record_id, "Reading pair record");
+
+    if pair_record_id.contains('/')
+        || pair_record_id.contains('\\')
+        || pair_record_id.contains("..")
+    {
+        warn!(?pair_record_id, "malicious pair record id detected");
+        return Err(RusbmuxError::UnexpectedPacket(
+            "Given pair record id is malformed".into(),
+        ));
+    }
 
     let path = format!("{LOCKDOWN_PATH}/{pair_record_id}.plist");
 
@@ -89,27 +79,20 @@ pub async fn read_pair_record(
         pairing_file_xml,
         UsbMuxVersion::Plist,
         UsbMuxMsgType::MessagePlist,
-        usbmux_packet.header.tag,
+        tag,
     );
 
     trace!(tag, "Sending pair record response");
 
     writer.write_all(&usbmux_packet).await.inspect_err(|e| {
-        error!(
-            tag,
-            pair_record_id,
-            err = ?e,
-            "Failed to write read pair record response"
-        );
-    })?;
-
-    writer.flush().await.inspect_err(|e| {
-        error!(
-            tag,
-            pair_record_id,
-            err = ?e,
-            "Failed to flush read pair record response"
-        );
+        if !crate::utils::is_disconnect_io(e) {
+            error!(
+                tag,
+                pair_record_id,
+                err = ?e,
+                "Failed to write read pair record response"
+            );
+        }
     })?;
 
     debug!(tag, pair_record_id, "Pair record sent");

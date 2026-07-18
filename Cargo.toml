@@ -1,6 +1,6 @@
 [package]
 name = "rusbmux"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2024"
 authors = ["Abdullah Al-Banna"]
 description = "A usbmuxd replacement in pure Rust"
@@ -48,6 +48,7 @@ async-stream = "0.3.6"
 pack1 = "1.0.0"
 bitflags = "2"
 etherparse = "0.19"
+serde = { version = "1", features = ["derive"] }
 
 [target.'cfg(target_family = "unix")'.dependencies]
 rustix = { version = "1.1.4", features = ["net"], optional = true }
@@ -83,6 +84,7 @@ codegen-units = 1
 strip = true
 panic = "abort"
 
+# Linux package specific
 [package.metadata.deb]
 recommends = "systemd"
 suggests = ["libimobiledevice-utils"]
