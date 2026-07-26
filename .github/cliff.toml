@@ -104,6 +104,8 @@ commit_parsers = [
   { message = "^build", group = "<!-- 06 -->Build System" },
   { message = "^ci", group = "<!-- 07 -->Continuous Integration" },
   { message = "^revert", group = "<!-- 08 -->Reverts" },
+  { message = "^chore\\(deps", skip = true },
+  { message = "^chore\\(release", skip = true },
   { message = "^chore", group = "<!-- 9 -->Miscellaneous Tasks" },
   { body = ".*security", group = "<!-- 10 -->Security" },
   { message = ".*", group = "<!-- 11 -->Other Commits" },

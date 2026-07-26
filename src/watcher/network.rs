@@ -29,10 +29,17 @@ use super::CONNECTED_DEVICES;
 pub const SERVICE_TYPE: &str = "_apple-mobdev2._tcp.local.";
 
 pub async fn watch_network_daemon() {
-    let mdns = ServiceDaemon::new().expect("Failed to create daemon");
+    let Ok(mdns) = ServiceDaemon::new() else {
+        error!("Failed to create mDNS daemon");
+        return;
+    };
 
-    let receiver = mdns.browse(SERVICE_TYPE).expect("Failed to browse");
+    let Ok(receiver) = mdns.browse(SERVICE_TYPE) else {
+        error!("Failed to browse mDNS");
+        return;
+    };
 
+    // TODO: it should probably retry if recv_async failed
     while let Ok(event) = receiver.recv_async().await {
         match event {
             ServiceEvent::ServiceResolved(rs) => {
@@ -62,7 +69,10 @@ pub async fn watch_network_daemon() {
                     continue;
                 };
 
-                let (_, device) = CONNECTED_DEVICES.remove(&id).expect("this shouldn't fail");
+                let Some((_, device)) = CONNECTED_DEVICES.remove(&id) else {
+                    warn!(id, "Device was already removed from CONNECTED_DEVICES");
+                    continue;
+                };
                 let _ = device.shutdown().await;
 
                 // only send the detached event if:
@@ -83,9 +93,13 @@ pub async fn watch_network_daemon() {
 
 pub async fn watch_network() -> impl Stream<Item = Result<NetworkEvent, RusbmuxError>> {
     async_stream::try_stream! {
-        let mdns = ServiceDaemon::new().expect("Failed to create daemon");
+        let mdns = ServiceDaemon::new().map_err(|e| {
+            RusbmuxError::UnexpectedPacket(format!("Failed to create mDNS daemon: {e}"))
+        })?;
 
-        let receiver = mdns.browse(SERVICE_TYPE).expect("Failed to browse");
+        let receiver = mdns.browse(SERVICE_TYPE).map_err(|e| {
+            RusbmuxError::UnexpectedPacket(format!("Failed to browse mDNS: {e}"))
+        })?;
 
         let mut devices_id_map = HashMap::new();
         while let Ok(event) = receiver.recv_async().await {
@@ -131,7 +145,7 @@ pub async fn watch_network() -> impl Stream<Item = Result<NetworkEvent, RusbmuxE
 }
 
 struct ResolvedDevice {
-    addr: IpAddr,
+    addr: (IpAddr, Option<IpAddr>),
     scope_id: u32,
     mac_address: String,
     service_name: String,
@@ -143,29 +157,25 @@ fn resolve_service(rs: Box<ResolvedService>) -> Option<ResolvedDevice> {
     let addresses = rs.addresses.clone();
 
     // perfer ipv6 if available
-    let (addr, scope_id) = if addresses.iter().any(mdns_sd::ScopedIp::is_ipv6) {
-        let mdns_sd::ScopedIp::V6(addr) = addresses
-            .into_iter()
-            .find(mdns_sd::ScopedIp::is_ipv6)
-            .unwrap()
-        else {
-            unreachable!()
-        };
+    let ipv6 = addresses.iter().find_map(|addr| match addr {
+        mdns_sd::ScopedIp::V6(addr) => Some((IpAddr::V6(*addr.addr()), addr.scope_id().index)),
+        _ => None,
+    });
 
-        (IpAddr::V6(*addr.addr()), addr.scope_id().index)
-    } else {
-        let mdns_sd::ScopedIp::V4(addr) = addresses
-            .into_iter()
-            .find(mdns_sd::ScopedIp::is_ipv4)
-            .unwrap()
-        else {
-            unreachable!()
-        };
-
-        (
+    let ipv4 = addresses.iter().find_map(|addr| match addr {
+        mdns_sd::ScopedIp::V4(addr) => Some((
             IpAddr::V4(*addr.addr()),
             addr.interface_ids().first().map_or(0, |i| i.index),
-        )
+        )),
+        _ => None,
+    });
+
+    let ((primary, secondary), scope_id) = match (ipv6, ipv4) {
+        (Some((v6, scope)), Some((v4, _))) => ((v6, Some(v4)), scope),
+        (Some((v6, scope)), None) => ((v6, None), scope),
+        (None, Some((v4, scope))) => ((v4, None), scope),
+        // FIXME: what if no address is given
+        (None, None) => unreachable!(),
     };
 
     // iOS 26.4+: match by Bonjour TXT record (identifier + authTag HMACs).
@@ -211,7 +221,7 @@ fn resolve_service(rs: Box<ResolvedService>) -> Option<ResolvedDevice> {
     };
 
     Some(ResolvedDevice {
-        addr,
+        addr: (primary, secondary),
         scope_id,
         mac_address: mac_address.to_string(),
         service_name: rs.fullname,
@@ -342,9 +352,15 @@ fn match_txt(identifier: &[u8], decoded_tags: &[[u8; 8]]) -> Option<String> {
 
 /// gets all the valid pairing files along side it's file stem (udid)
 fn get_saved_pairing_files() -> Vec<(String, PairingFile)> {
-    Path::new(LOCKDOWN_PATH)
-        .read_dir()
-        .unwrap()
+    let entries = match Path::new(LOCKDOWN_PATH).read_dir() {
+        Ok(dirs) => dirs,
+        Err(e) => {
+            debug!(err = ?e, "Failed to read the directories of `{LOCKDOWN_PATH}`");
+            return Vec::new();
+        }
+    };
+
+    entries
         .flatten()
         .map(|di| di.path())
         .map(|path| {

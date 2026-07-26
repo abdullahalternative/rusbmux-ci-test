@@ -5,7 +5,6 @@ use crate::{
     conn::{DeviceConn, NetworkDeviceConn, UsbDeviceConn},
     error::RusbmuxError,
     handler::send_result,
-    parser::usbmux::UsbMuxPacket,
     watcher::CONNECTED_DEVICES,
 };
 
@@ -19,45 +18,27 @@ const CLIENT_BUFF_SIZE: usize = 128 * 1024;
 
 pub async fn handle_connect(
     mut client: Box<dyn ReadWrite>,
-    usbmux_packet: UsbMuxPacket,
+    device_id: u64,
+    port_number: u16,
+    tag: u32,
 ) -> Result<(), RusbmuxError> {
-    let conn = match connect(&usbmux_packet).await {
+    let conn = match connect(device_id, port_number, tag).await {
         Ok(c) => c,
         Err(e) => {
             match e {
-                RusbmuxError::ValueNotFound("DeviceID")
-                | RusbmuxError::DeviceNotFound(_)
-                | RusbmuxError::RanOutofSourcePort => {
-                    send_result(
-                        &mut client,
-                        ResultCode::BadDeviceOrNoSuchFile,
-                        usbmux_packet.header.tag,
-                    )
-                    .await?;
-                }
-                RusbmuxError::ValueNotFound("PortNumber") => {
-                    send_result(
-                        &mut client,
-                        ResultCode::BadCommand,
-                        usbmux_packet.header.tag,
-                    )
-                    .await?;
+                RusbmuxError::DeviceNotFound(_) | RusbmuxError::RanOutofSourcePort => {
+                    send_result(&mut client, ResultCode::BadDeviceOrNoSuchFile, tag).await?;
                 }
 
                 _ => {
-                    send_result(
-                        &mut client,
-                        ResultCode::ConnectionRefused,
-                        usbmux_packet.header.tag,
-                    )
-                    .await?;
+                    send_result(&mut client, ResultCode::ConnectionRefused, tag).await?;
                 }
             }
             return Err(e);
         }
     };
 
-    send_result(&mut client, ResultCode::OK, usbmux_packet.header.tag).await?;
+    send_result(&mut client, ResultCode::OK, tag).await?;
 
     match conn {
         DeviceConn::Usb(conn) => handle_usb_device_connect(client, conn).await?,
@@ -89,7 +70,7 @@ pub async fn handle_network_device_connect(
 
         _ = canceler.cancelled() => {
             debug!(device_id, port_number, "Shutting down connection");
-            Err(RusbmuxError::DeviceNotFound(device_id))
+            Ok(())
         }
     }
 }
@@ -108,7 +89,7 @@ pub async fn handle_usb_device_connect(
         tokio::select! {
             _ = conn.wait_shutdown() => {
                 debug!(device_id, port_number, "Device is shutting down");
-                return Err(RusbmuxError::DeviceNotFound(device_id));
+                return Ok(());
             }
 
             packet = conn.recv() => {
@@ -150,10 +131,11 @@ pub async fn client_read(
         buf.reserve(sendable_bytes);
     }
 
-    client
-        .read_buf(buf)
-        .await
-        .inspect_err(|e| error!(err = ?e, "Failed to read from client"))?;
+    client.read_buf(buf).await.inspect_err(|e| {
+        if !crate::utils::is_disconnect_io(e) {
+            error!(err = ?e, "Failed to read from client");
+        }
+    })?;
 
     Ok(buf.split_to(sendable_bytes.min(buf.len())))
 }
@@ -164,66 +146,21 @@ pub async fn client_send(
 ) -> Result<(), RusbmuxError> {
     trace!(len = payload.len(), "Sending packet to client");
 
-    client
-        .write_all(&payload)
-        .await
-        .inspect_err(|e| error!(err = ?e, "Failed to write packet to client"))?;
-
-    // PERF: do I need to flush?
-    //
-    // client
-    //     .flush()
-    //     .await
-    //     .inspect_err(|e| error!(err = ?e, "Failed to flush client"))?;
+    client.write_all(&payload).await.inspect_err(|e| {
+        if !crate::utils::is_disconnect_io(e) {
+            error!(err = ?e, "Failed to write packet to client")
+        }
+    })?;
 
     Ok(())
 }
 
-pub async fn connect(usbmux_packet: &UsbMuxPacket) -> Result<DeviceConn, RusbmuxError> {
-    let client_payload = usbmux_packet
-        .payload
-        .as_plist()
-        .ok_or(RusbmuxError::UnexpectedPacket(
-            "Expected a packet with a plist payload".to_string(),
-        ))?;
-
-    let client_payload_dict =
-        client_payload
-            .as_dictionary()
-            .ok_or(RusbmuxError::UnexpectedPacket(
-                "Expected a packet with a dictionary plist payload".to_string(),
-            ))?;
-
-    let device_id = client_payload_dict
-        .get("DeviceID")
-        .ok_or(RusbmuxError::ValueNotFound("DeviceID"))?
-        .as_unsigned_integer()
-        .ok_or(RusbmuxError::InvalidData(
-            "DeviceID is not an unsigned integer",
-        ))?;
-
-    let port_number = client_payload_dict
-        .get("PortNumber")
-        .ok_or(RusbmuxError::ValueNotFound("PortNumber"))
-        .map(|v| {
-            if let Some(ui) = v.as_unsigned_integer() {
-                Ok(ui as u16)
-            } else if let Some(si) = v.as_signed_integer() {
-                Ok(si as u16)
-            } else {
-                Err(RusbmuxError::InvalidData(
-                    "PortNumber is neither a signed number nor an unsigned number",
-                ))
-            }
-        })??
-        .to_be();
-
-    info!(
-        device_id,
-        port_number,
-        tag = usbmux_packet.header.tag,
-        "Client connecting"
-    );
+pub async fn connect(
+    device_id: u64,
+    port_number: u16,
+    tag: u32,
+) -> Result<DeviceConn, RusbmuxError> {
+    info!(device_id, port_number, tag, "Client connecting");
 
     let device = CONNECTED_DEVICES
         .get(&device_id)

@@ -1,6 +1,7 @@
 pub mod core;
 pub mod network;
 pub mod packet_router;
+pub mod power_assertion;
 pub mod usb;
 use std::{borrow::Cow, net::IpAddr, sync::Arc};
 
@@ -51,7 +52,7 @@ impl Device {
 
     pub async fn new_network(
         id: u64,
-        addr: IpAddr,
+        addr: (IpAddr, Option<IpAddr>),
         scope_id: Option<u32>,
         mac_address: String,
         service_name: String,

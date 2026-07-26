@@ -1,4 +1,5 @@
-use tracing::{error, info};
+use crate::error::RusbmuxError;
+use tracing::{debug, error, info, warn};
 
 #[cfg(unix)]
 type Listener = tokio::net::UnixListener;
@@ -10,20 +11,65 @@ type Listener = tokio::net::TcpListener;
 #[cfg(windows)]
 const LISTENER_PATH: &str = "127.0.0.1:27015";
 
-async fn get_listener() -> Listener {
-    let listener = Listener::bind(LISTENER_PATH);
+#[cfg(target_os = "macos")]
+unsafe extern "C" {
+    fn launch_activate_socket(
+        name: *const libc::c_char,
+        fds: *mut *mut libc::c_int,
+        cnt: *mut libc::size_t,
+    ) -> libc::c_int;
+}
 
+#[cfg(target_os = "macos")]
+fn launchd_listener(name: &str) -> Result<Option<Listener>, RusbmuxError> {
+    use std::{
+        ffi::CString,
+        os::{
+            fd::{FromRawFd, RawFd},
+            unix::net::UnixListener as StdUnixListener,
+        },
+    };
+
+    let name = CString::new(name).unwrap();
+
+    let mut fds: *mut libc::c_int = std::ptr::null_mut();
+    let mut count: libc::size_t = 0;
+
+    let ret = unsafe { launch_activate_socket(name.as_ptr(), &mut fds, &mut count) };
+
+    if ret != 0 || count == 0 {
+        return Ok(None);
+    }
+
+    let fd: RawFd = unsafe { *fds };
+
+    let listener = unsafe { StdUnixListener::from_raw_fd(fd) };
+
+    listener.set_nonblocking(true)?;
+
+    Ok(Some(Listener::from_std(listener)?))
+}
+
+async fn get_listener() -> Result<Listener, RusbmuxError> {
     #[cfg(windows)]
-    let listener = listener.await.unwrap();
+    return Ok(Listener::bind(LISTENER_PATH).await?);
 
     #[cfg(unix)]
-    let listener = listener.unwrap();
+    {
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(l) = launchd_listener("Listeners")? {
+                // TODO: if it came from launchd, then don't try to remove it or set permissions
+                return Ok(l);
+            }
+        }
 
-    listener
+        return Ok(Listener::bind(LISTENER_PATH)?);
+    }
 }
 
 #[cfg(feature = "bin")]
-pub async fn run() {
+pub async fn run() -> Result<(), RusbmuxError> {
     use crate::{
         handler::create_lockdown_dir,
         watcher::{watch_network_daemon, watch_usb_daemon},
@@ -33,36 +79,46 @@ pub async fn run() {
     {
         let socket_path = std::path::Path::new(LISTENER_PATH);
         if socket_path.exists() {
-            tracing::debug!("Socket file already exists, removing...");
+            debug!("Socket file already exists, removing...");
 
-            std::fs::remove_file(socket_path).unwrap();
+            if let Err(e) = std::fs::remove_file(socket_path) {
+                warn!(err = ?e, "Failed to remove existing socket file");
+            }
         }
     }
 
-    let listener = get_listener().await;
-    create_lockdown_dir().await.unwrap();
+    let listener = get_listener().await?;
+    if let Err(e) = create_lockdown_dir().await {
+        error!(err = ?e, "Failed to create lockdown directory");
+    }
 
     #[cfg(unix)]
     {
-        tracing::debug!("Setting the `ReuseAddr` socket option");
-        rustix::net::sockopt::set_socket_reuseaddr(&listener, true)
-            .expect("unable to set the `ReuseAddr` socket option");
+        debug!("Setting the `ReuseAddr` socket option");
+        if let Err(e) = rustix::net::sockopt::set_socket_reuseaddr(&listener, true) {
+            warn!(err = ?e, "Failed to set ReuseAddr socket option");
+        }
 
         // macos shuts the entire process if there's something wrong when reading or writing to the
         // socket, so this stops it
         #[cfg(target_os = "macos")]
         {
-            tracing::debug!("Setting the `Nosigpipe` socket option");
-            rustix::net::sockopt::set_socket_nosigpipe(&listener, true)
-                .expect("unable to set the `Nosigpipe` socket option");
+            debug!("Setting the `Nosigpipe` socket option");
+            if let Err(e) = rustix::net::sockopt::set_socket_nosigpipe(&listener, true) {
+                warn!(err = ?e, "Failed to set Nosigpipe socket option");
+            }
         }
     }
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        tracing::debug!("Setting the socket permissions to 666");
-        std::fs::set_permissions(LISTENER_PATH, std::fs::Permissions::from_mode(0o666)).unwrap();
+        debug!("Setting the socket permissions to 666");
+        if let Err(e) =
+            std::fs::set_permissions(LISTENER_PATH, std::fs::Permissions::from_mode(0o666))
+        {
+            warn!(err = ?e, "Failed to set socket permissions");
+        }
     }
 
     info!("Spawning the device watcher");
@@ -84,13 +140,20 @@ pub async fn run() {
 
     // wait for RST packets, just in case
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    Ok(())
 }
 
+#[cfg(feature = "bin")]
 pub async fn wait_shutdown() {
     #[cfg(unix)]
     {
-        let mut sigterm =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
+        let Ok(mut sigterm) =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        else {
+            warn!("Failed to register SIGTERM handler");
+            return;
+        };
 
         tokio::select! {
             _ = sigterm.recv() => {
@@ -101,10 +164,34 @@ pub async fn wait_shutdown() {
 
     #[cfg(windows)]
     {
-        let mut shutdown = tokio::signal::windows::ctrl_shutdown().unwrap();
-        let mut cbreak = tokio::signal::windows::ctrl_break().unwrap();
-        let mut close = tokio::signal::windows::ctrl_close().unwrap();
-        let mut logoff = tokio::signal::windows::ctrl_logoff().unwrap();
+        let mut shutdown = match tokio::signal::windows::ctrl_shutdown() {
+            Ok(s) => s,
+            Err(e) => {
+                warn!(err = ?e, "Failed to register ctrl_shutdown handler");
+                return;
+            }
+        };
+        let mut cbreak = match tokio::signal::windows::ctrl_break() {
+            Ok(s) => s,
+            Err(e) => {
+                warn!(err = ?e, "Failed to register ctrl_break handler");
+                return;
+            }
+        };
+        let mut close = match tokio::signal::windows::ctrl_close() {
+            Ok(s) => s,
+            Err(e) => {
+                warn!(err = ?e, "Failed to register ctrl_close handler");
+                return;
+            }
+        };
+        let mut logoff = match tokio::signal::windows::ctrl_logoff() {
+            Ok(s) => s,
+            Err(e) => {
+                warn!(err = ?e, "Failed to register ctrl_logoff handler");
+                return;
+            }
+        };
         tokio::select! {
             _ = shutdown.recv() => {
                 info!("Got a shutdown signal, closing...");

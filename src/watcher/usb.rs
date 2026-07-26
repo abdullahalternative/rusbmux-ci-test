@@ -1,12 +1,16 @@
+use std::time::Duration;
+
 use futures_lite::StreamExt;
+use tokio::time::Instant;
 
 use crate::{
     device::Device,
+    error::RusbmuxError,
     usb_backend::{self, APPLE_VID, UsbBackend},
 };
 
 use super::{CONNECTED_DEVICES, DeviceEvent};
-use tracing::{error, trace};
+use tracing::{Instrument, error, trace};
 
 pub async fn watch_usb_daemon(backend: impl UsbBackend) {
     let hotplug_event_tx = super::get_hotplug_event_tx().await;
@@ -33,7 +37,34 @@ pub async fn watch_usb_daemon(backend: impl UsbBackend) {
 
         match event {
             Ok(usb_backend::Event::Connected(device_info, id)) => {
-                let device = Device::new_usb(device_info, id).await;
+                let opaque_id = device_info.opaque_id();
+                let device = match Device::new_usb(device_info, id).await {
+                    Ok(device) => Ok(device),
+                    Err(first_error) => {
+                        let deadline = Instant::now() + Duration::from_secs(3);
+
+                        loop {
+                            if Instant::now() >= deadline {
+                                break Err(first_error);
+                            }
+
+                            let device_info = backend
+                                .list_devices()
+                                .await
+                                .into_iter()
+                                .find(|device| device.opaque_id() == opaque_id);
+
+                            if let Some(device_info) = device_info
+                                && let Ok(device) = Device::new_usb(device_info, id).await
+                            {
+                                break Ok(device);
+                            }
+
+                            tokio::time::sleep(Duration::from_millis(100)).await;
+                        }
+                    }
+                };
+
                 match device {
                     Ok(device) => {
                         if let Some(ndev) = CONNECTED_DEVICES.iter().find(|dev| {
@@ -42,6 +73,12 @@ pub async fn watch_usb_daemon(backend: impl UsbBackend) {
                         }) {
                             let _ = hotplug_event_tx.send(DeviceEvent::Detached { id: ndev.id() });
                         }
+
+                        // A device may emit multiple connect events (especially during boot), and the
+                        // initial connection may not receive a matching disconnect event. Remove any
+                        // stale entry before registering the new connection.
+                        CONNECTED_DEVICES
+                            .retain(|_, d| d.serial_number() != device.serial_number());
 
                         CONNECTED_DEVICES.insert(id, device);
                     }
@@ -54,12 +91,14 @@ pub async fn watch_usb_daemon(backend: impl UsbBackend) {
                 let _ = hotplug_event_tx.send(DeviceEvent::Attached { id });
             }
             Ok(usb_backend::Event::Disconnected(id)) => {
-                if let Err(e) = super::remove_device(id).await {
-                    error!(e = ?e, "Failed to remove disconnected device");
+                match super::remove_device(id).await {
+                    Ok(_) => {
+                        // TODO: maybe we can put this into the `remove_device` function instead
+                        let _ = hotplug_event_tx.send(DeviceEvent::Detached { id });
+                    }
+                    Err(RusbmuxError::DeviceNotFound(_)) => {}
+                    Err(e) => error!(e = ?e, "Failed to remove disconnected device"),
                 }
-
-                // TODO: maybe we can put this into the `remove_device` function instead
-                let _ = hotplug_event_tx.send(DeviceEvent::Detached { id });
             }
             Err(e) => error!(?e, "Hotplug error"),
         }

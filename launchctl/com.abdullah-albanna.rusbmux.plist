@@ -7,7 +7,12 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.abdullah-albanna.usbmuxd</string>
+	<string>com.abdullah-albanna.rusbmux</string>
+  <!-- <key>EnvironmentVariables</key> -->
+  <!-- <dict> -->
+  <!--   <key>RUST_LOG</key> -->
+  <!--   <string>debug</string> -->
+  <!-- </dict> -->
 	<key>ProgramArguments</key>
 	<array>
     <string>/usr/local/bin/rusbmux</string>
@@ -32,5 +37,9 @@
 	<true/>
 	<key>POSIXSpawnType</key>
 	<string>Interactive</string>
+  <!-- <key>StandardOutPath</key> -->
+  <!-- <string>/tmp/rusbmux.out</string> -->
+  <!-- <key>StandardErrorPath</key> -->
+  <!-- <string>/tmp/rusbmux.err</string> -->
 </dict>
 </plist>

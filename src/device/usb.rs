@@ -63,7 +63,7 @@ impl UsbDevice {
 
         let (end_in, end_out) = device_handle.endpoint().await?;
 
-        let (tx, rx) = mpmc::bounded_async(16);
+        let (tx, rx) = mpmc::bounded_async(256);
 
         let device = Arc::new(Self {
             handler: device_handle,
@@ -83,14 +83,32 @@ impl UsbDevice {
 
         info!(device_id = id, "Spawning reader & writer loops");
 
-        let reader_loop_handler =
-            tokio::spawn(Self::start_reader_loop(Arc::clone(&device), end_in, id));
-        let writer_loop_handler = tokio::spawn(Self::start_writer_loop(
-            Arc::clone(&device),
-            rx,
-            end_out,
-            id,
-        ));
+        let device1 = Arc::clone(&device);
+        let device2 = Arc::clone(&device);
+
+        let reader_loop_handler = tokio::spawn(async move {
+            tokio::select! {
+                _ = device1.start_reader_loop(end_in, id) => {}
+                _ = device1.core.canceler.cancelled() => {}
+            }
+        });
+
+        // let reader_loop_handler =
+        //     tokio::spawn(Self::start_reader_loop(Arc::clone(&device), end_in, id));
+
+        let writer_loop_handler = tokio::spawn(async move {
+            tokio::select! {
+                _ = device2.start_writer_loop(rx, end_out, id) => {}
+                _ = device2.core.canceler.cancelled() => {}
+            }
+        });
+
+        // let writer_loop_handler = tokio::spawn(Self::start_writer_loop(
+        //     Arc::clone(&device),
+        //     rx,
+        //     end_out,
+        //     id,
+        // ));
 
         device.reader_loop_handler.set(reader_loop_handler).unwrap();
         device.writer_loop_handler.set(writer_loop_handler).unwrap();
@@ -116,6 +134,7 @@ impl UsbDevice {
 
         debug!(device_id = id, "Sent version packet");
 
+        // TODO: add timeout
         let version = loop {
             let version_response = UsbDevicePacket::from_reader(&mut end_in).await?;
 
@@ -140,7 +159,7 @@ impl UsbDevice {
 
         debug!(device_id = id, "Sent setup packet");
 
-        let (tx, rx) = mpmc::bounded_async(16);
+        let (tx, rx) = mpmc::bounded_async(256);
 
         let device = Arc::new(Self {
             handler: device_handle,
@@ -160,14 +179,22 @@ impl UsbDevice {
 
         info!(device_id = id, "Spawning reader & writer loops");
 
-        let reader_loop_handler =
-            tokio::spawn(Self::start_reader_loop(Arc::clone(&device), end_in, id));
-        let writer_loop_handler = tokio::spawn(Self::start_writer_loop(
-            Arc::clone(&device),
-            rx,
-            end_out,
-            id,
-        ));
+        let device1 = Arc::clone(&device);
+        let device2 = Arc::clone(&device);
+
+        let reader_loop_handler = tokio::spawn(async move {
+            tokio::select! {
+                _ = device1.start_reader_loop(end_in, id) => {}
+                _ = device1.core.canceler.cancelled() => {}
+            }
+        });
+
+        let writer_loop_handler = tokio::spawn(async move {
+            tokio::select! {
+                _ = device2.start_writer_loop(rx, end_out, id) => {}
+                _ = device2.core.canceler.cancelled() => {}
+            }
+        });
 
         device.reader_loop_handler.set(reader_loop_handler).unwrap();
         device.writer_loop_handler.set(writer_loop_handler).unwrap();
@@ -177,7 +204,7 @@ impl UsbDevice {
         Ok(device)
     }
 
-    pub async fn start_reader_loop(self: Arc<Self>, mut end_in: AnyEndpointReader, device_id: u64) {
+    async fn start_reader_loop(&self, mut end_in: AnyEndpointReader, device_id: u64) {
         info!(target: "device_reader", device_id, "Reader loop started");
         loop {
             trace!(target: "device_reader", device_id, "Waiting for a packet");
@@ -198,6 +225,7 @@ impl UsbDevice {
 
             self.increment_recv_seq();
 
+            // TODO: route it to the connection, then close it
             if let Some(t) = packet.tcp_hdr.as_ref()
                 && t.rst
             {
@@ -230,7 +258,7 @@ impl UsbDevice {
                 target: "device_reader",
                 device_id,
                 payload = ?packet.payload.as_bytes(),
-                len = packet.header.as_v2().unwrap().length.get(),
+                len = packet.header.get_length(),
                 "Received a packet from the device"
             );
 
@@ -238,8 +266,8 @@ impl UsbDevice {
         }
     }
 
-    pub async fn start_writer_loop(
-        self: Arc<Self>,
+    async fn start_writer_loop(
+        &self,
         rx: MAsyncRx<mpmc::Array<UsbDevicePacket>>,
         mut end_out: AnyEndpointWriter,
         device_id: u64,
@@ -276,6 +304,7 @@ impl UsbDevice {
                 UsbDevicePacketHeader::V1(h) => {
                     if let Err(e) = end_out.write_all(h.encode()).await {
                         error!(target: "device_writer", device_id, err = ?e, "Failed to write packet header v1");
+                        continue;
                     }
                 }
                 UsbDevicePacketHeader::V2(h) => {
@@ -286,12 +315,14 @@ impl UsbDevice {
 
                         if let Err(e) = end_out.write_all(&hbuf).await {
                             error!(target: "device_writer", device_id, err = ?e, "Failed to write packet header v2");
+                            continue;
                         }
                     } else if let Err(e) = end_out
                         .write_all(&hbuf[..UsbDevicePacketHeaderV2::SIZE])
                         .await
                     {
                         error!(target: "device_writer", device_id, err = ?e, "Failed to write packet header v2");
+                        continue;
                     }
                 }
             }
@@ -312,9 +343,7 @@ impl UsbDevice {
         self: &Arc<Self>,
         destination_port: u16,
     ) -> Result<Arc<UsbDeviceConn>, RusbmuxError> {
-        let source_port = self
-            .next_source_port
-            .load(std::sync::atomic::Ordering::Relaxed);
+        let source_port = self.get_next_source_port()?;
 
         debug!(
             device_id = self.core.id,
@@ -328,6 +357,7 @@ impl UsbDevice {
         let conn = UsbDeviceConn::new(
             self,
             Arc::downgrade(&Arc::clone(&self.router)),
+            source_port,
             destination_port,
             rx,
             self.w_tx.clone(),
@@ -456,19 +486,19 @@ impl UsbDevice {
     }
 
     pub async fn shutdown(&self) -> Result<(), RusbmuxError> {
-        self.set_dropped();
-        self.close_all().await?;
-        self.drop_loops();
         self.core.canceler.cancel();
+        self.set_dropped();
+        self.drop_loops();
+        self.close_all().await?;
 
         Ok(())
     }
 
     pub fn shutdown_blocking(&self) -> Result<(), RusbmuxError> {
-        self.set_dropped();
-        self.close_all_blocking()?;
-        self.drop_loops();
         self.core.canceler.cancel();
+        self.set_dropped();
+        self.drop_loops();
+        self.close_all_blocking()?;
 
         Ok(())
     }

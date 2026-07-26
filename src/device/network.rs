@@ -1,68 +1,18 @@
 use std::net::{IpAddr, SocketAddr, SocketAddrV6};
 
 use idevice::{
-    IdeviceService, heartbeat::HeartbeatClient, pairing_file::PairingFile,
-    provider::IdeviceProvider,
+    IdeviceService, heartbeat::HeartbeatClient, pairing_file::PairingFile, provider::TcpProvider,
 };
 use tokio::{sync::watch, task::JoinHandle};
 use tracing::{debug, warn};
 
 use crate::{
-    conn::NetworkDeviceConn, device::core::DeviceCore, error::RusbmuxError, handler::LOCKDOWN_PATH,
+    conn::NetworkDeviceConn,
+    device::{core::DeviceCore, power_assertion::PowerAssertion},
+    error::RusbmuxError,
+    handler::LOCKDOWN_PATH,
     watcher::remove_device,
 };
-
-// TODO: remove once merged: https://github.com/jkcoxson/idevice/pull/85
-#[derive(Debug)]
-pub struct Tcpv6Provider {
-    /// IP address of the device
-    pub addr: std::net::Ipv6Addr,
-    pub scope_id: u32,
-    /// Pairing file for secure communication
-    pub pairing_file: PairingFile,
-    /// Label identifying this connection
-    pub label: String,
-}
-
-impl idevice::provider::IdeviceProvider for Tcpv6Provider {
-    /// Connects to the device over TCP
-    ///
-    /// # Arguments
-    /// * `port` - The TCP port to connect to
-    ///
-    /// # Returns
-    /// An `Idevice` wrapped in a future
-    fn connect(
-        &self,
-        port: u16,
-    ) -> std::pin::Pin<
-        Box<dyn Future<Output = Result<idevice::Idevice, idevice::IdeviceError>> + Send>,
-    > {
-        let addr = self.addr;
-        let label = self.label.clone();
-        let scope_id = self.scope_id;
-        Box::pin(async move {
-            let socket_addr =
-                std::net::SocketAddr::V6(std::net::SocketAddrV6::new(addr, port, 0, scope_id));
-            let stream = tokio::net::TcpStream::connect(socket_addr).await?;
-            Ok(idevice::Idevice::new(Box::new(stream), label))
-        })
-    }
-
-    /// Returns the connection label
-    fn label(&self) -> &str {
-        &self.label
-    }
-
-    /// Returns the pairing file (cloned from the provider)
-    fn get_pairing_file(
-        &self,
-    ) -> std::pin::Pin<Box<dyn Future<Output = Result<PairingFile, idevice::IdeviceError>> + Send>>
-    {
-        let pairing_file = self.pairing_file.clone();
-        Box::pin(async move { Ok(pairing_file) })
-    }
-}
 
 #[derive(Debug)]
 pub struct NetworkDevice {
@@ -80,6 +30,7 @@ pub struct NetworkDevice {
 
     pub hb_failed: watch::Receiver<()>,
     pub hb_handler: JoinHandle<()>,
+    _power_assertion: PowerAssertion,
 }
 
 impl Drop for NetworkDevice {
@@ -93,14 +44,15 @@ impl Drop for NetworkDevice {
 impl NetworkDevice {
     pub async fn new(
         id: u64,
-        addr: IpAddr,
+        addr: (IpAddr, Option<IpAddr>),
         scope_id: Option<u32>,
         mac_address: String,
         service_name: String,
         serial_number: String,
     ) -> Result<Self, RusbmuxError> {
-        let mut heartbeat_client =
+        let (mut heartbeat_client, addr) =
             Self::connect_heartbeat_client(addr, scope_id, serial_number.clone()).await?;
+        let power_assertion = PowerAssertion::new(addr, scope_id, &serial_number).await?;
 
         let (tx, rx) = watch::channel(());
 
@@ -157,34 +109,46 @@ impl NetworkDevice {
             serial_number,
             hb_failed: rx,
             hb_handler,
+            _power_assertion: power_assertion,
         })
     }
 
     async fn connect_heartbeat_client(
-        addr: IpAddr,
+        addr: (IpAddr, Option<IpAddr>),
         scope_id: Option<u32>,
         serial_number: String,
-    ) -> Result<HeartbeatClient, RusbmuxError> {
+    ) -> Result<(HeartbeatClient, IpAddr), RusbmuxError> {
         let pairing_file =
             PairingFile::read_from_file(format!("{LOCKDOWN_PATH}/{serial_number}.plist"))?;
 
         let label = format!("rusbmux_{serial_number}_heartbeat_client");
 
-        let tcp: Box<dyn IdeviceProvider> = match addr {
-            IpAddr::V4(_) => Box::new(idevice::provider::TcpProvider {
-                addr,
-                pairing_file,
-                label,
-            }),
-            IpAddr::V6(ipv6) => Box::new(Tcpv6Provider {
-                addr: ipv6,
-                scope_id: scope_id.unwrap_or(0),
-                pairing_file,
-                label,
-            }),
+        let make_provider = |ip: IpAddr| TcpProvider {
+            addr: ip,
+            scope_id,
+            pairing_file: pairing_file.clone(),
+            label: label.clone(),
         };
 
-        Ok(HeartbeatClient::connect(tcp.as_ref()).await?)
+        let provider = make_provider(addr.0);
+
+        match HeartbeatClient::connect(&provider).await {
+            Ok(client) => return Ok((client, addr.0)),
+            Err(first_error) => {
+                if let Some(second_ip) = addr.1 {
+                    debug!("Failed to connect to {}, trying {second_ip}", addr.0);
+
+                    let provider = make_provider(second_ip);
+
+                    match HeartbeatClient::connect(&provider).await {
+                        Ok(client) => return Ok((client, second_ip)),
+                        Err(_) => return Err(RusbmuxError::Idevice(first_error)),
+                    }
+                }
+
+                Err(RusbmuxError::Idevice(first_error))
+            }
+        }
     }
 
     pub async fn connect(&self, port: u16) -> Result<NetworkDeviceConn, RusbmuxError> {
@@ -214,7 +178,7 @@ impl NetworkDevice {
         let mut network_address = [0u8; 128];
         match self.addr {
             IpAddr::V4(ipv4) => {
-                #[cfg(target_family = "unix")]
+                #[cfg(unix)]
                 {
                     const SOCKADDRV4_SIZE: usize = size_of::<libc::sockaddr_in>();
                     let socket = libc::sockaddr_in {
@@ -237,7 +201,7 @@ impl NetworkDevice {
 
                     network_address[..SOCKADDRV4_SIZE].copy_from_slice(socket_bytes);
                 }
-                #[cfg(target_os = "windows")]
+                #[cfg(windows)]
                 {
                     use windows_sys::Win32::Networking::WinSock;
                     const SOCKADDRV4_SIZE: usize = size_of::<WinSock::SOCKADDR_IN>();
@@ -263,7 +227,7 @@ impl NetworkDevice {
                 }
             }
             IpAddr::V6(ipv6) => {
-                #[cfg(target_family = "unix")]
+                #[cfg(unix)]
                 {
                     const SOCKADDRV6_SIZE: usize = size_of::<libc::sockaddr_in6>();
 
@@ -288,7 +252,7 @@ impl NetworkDevice {
 
                     network_address[..SOCKADDRV6_SIZE].copy_from_slice(socket_bytes);
                 }
-                #[cfg(target_os = "windows")]
+                #[cfg(windows)]
                 {
                     use windows_sys::Win32::Networking::WinSock;
                     const SOCKADDRV6_SIZE: usize = size_of::<WinSock::SOCKADDR_IN6>();

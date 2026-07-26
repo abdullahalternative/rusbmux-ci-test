@@ -5,6 +5,7 @@ use std::{
 
 use futures_lite::StreamExt;
 use nusb::{
+    descriptors::TransferType,
     hotplug::HotplugEvent,
     io::{EndpointRead, EndpointWrite},
     transfer::{Bulk, Direction},
@@ -86,8 +87,8 @@ async fn watch_usb() -> Result<BoxStream<Result<Event, RusbmuxError>>, RusbmuxEr
                     yield Event::Connected(info, id);
                 }
                 HotplugEvent::Disconnected(device_id) => {
-                    if let Some(id) = devices_id_map.get(&hash_id(device_id)) {
-                        yield Event::Disconnected(*id)
+                    if let Some(id) = devices_id_map.remove(&hash_id(device_id)) {
+                        yield Event::Disconnected(id)
                     }
                 }
             }
@@ -173,13 +174,19 @@ pub(crate) async fn device_endpoints(
 
     let end_out = interface_descriptor
         .endpoints()
-        .find(|ep| matches!(ep.direction(), Direction::Out))
+        .find(|ep| {
+            matches!(ep.direction(), Direction::Out)
+                && matches!(ep.transfer_type(), TransferType::Bulk)
+        })
         .ok_or(RusbmuxError::BulkOutEndpointNotFound)?
         .address();
 
     let end_in = interface_descriptor
         .endpoints()
-        .find(|ep| matches!(ep.direction(), Direction::In))
+        .find(|ep| {
+            matches!(ep.direction(), Direction::In)
+                && matches!(ep.transfer_type(), TransferType::Bulk)
+        })
         .ok_or(RusbmuxError::BulkInEndpointNotFound)?
         .address();
 
