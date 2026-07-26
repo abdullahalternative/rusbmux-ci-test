@@ -11,6 +11,16 @@ on:
           - release
           - pre-release
         default: pre-release
+      os:
+        description: "Target OS"
+        required: false
+        type: choice
+        options:
+          - all
+          - windows
+          - linux
+          - macos
+        default: all
 
 env:
   CARGO_TERM_COLOR: always
@@ -37,6 +47,7 @@ jobs:
   # Windows  –  rusbmux + USB driver + Inno Setup
   build-windows:
     needs: version-check
+    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'windows' }}
     strategy:
       matrix:
         include:
@@ -78,7 +89,7 @@ jobs:
 
       - name: Generate USB driver third-party licenses
         shell: pwsh
-        run: cargo about generate ../about.hbs -o THIRD_PARTY_LICENSES_USB
+        run: cargo about generate ../../about.hbs -o THIRD_PARTY_LICENSES_USB
         working-directory: windows/rusbmux-usb-win-driver
 
       - name: Combine third-party licenses
@@ -127,6 +138,7 @@ jobs:
   # Linux  –  glibc + musl (fully static)
   build-linux:
     needs: version-check
+    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'linux' }}
     strategy:
       matrix:
         include:
@@ -256,6 +268,7 @@ jobs:
 
   # macOS  –  Intel  +  Apple Silicon
   build-macos:
+    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'macos' }}
     needs: version-check
     strategy:
       matrix:
