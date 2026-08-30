@@ -5,16 +5,19 @@ use dashmap::DashMap;
 use tokio::sync::{OnceCell, broadcast};
 
 mod network;
+mod preflight;
 mod usb;
 
 use crate::{
     device::{ConnectionType, Device},
     error::RusbmuxError,
 };
-pub use network::watch_network;
 pub(crate) use network::watch_network_daemon;
+pub use network::{NetworkEvent, watch_network};
 
+pub use preflight::preflight;
 pub(crate) use usb::watch_usb_daemon;
+pub use usb::{UsbEvent, watch_usb};
 
 /// a channel used for hotplug events, once a device is connected it gets broadcasted to all it's
 /// subscribers
@@ -62,6 +65,10 @@ pub async fn remove_device(id: u64) -> Result<Device, RusbmuxError> {
                     .await
                     .send(DeviceEvent::Attached { id: ndev.id() });
             }
+
+            let _ = get_hotplug_event_tx()
+                .await
+                .send(DeviceEvent::Detached { id });
         }
 
         // the network device is also connected as usb, so skip sending the detached event

@@ -1,9 +1,13 @@
 use bytes::Bytes;
-use crossfire::{MAsyncRx, MAsyncTx, mpmc};
+use crossfire::{MAsyncRx, MAsyncTx, mpmc, mpsc, spsc};
 use tracing::{debug, info, trace};
 
 use crate::{
-    device::{core::DeviceCore, packet_router::PacketRouter, usb::UsbDevice},
+    device::{
+        core::DeviceCore,
+        packet_router::{PacketRouter, SAsyncPacketRx},
+        usb::UsbDevice,
+    },
     error::RusbmuxError,
     parser::device_mux::{TcpFlags, UsbDevicePacket},
     usb_backend::MAX_PACKET_PAYLOAD_SIZE,
@@ -13,6 +17,122 @@ use std::sync::{
     Arc, Weak,
     atomic::{AtomicBool, AtomicU16, AtomicU32, AtomicUsize},
 };
+
+#[derive(Clone, Copy)]
+pub struct TcpHandshake {
+    pub sent_bytes: u32,
+    pub received_bytes: u32,
+    pub device_window_size: u16,
+    pub device_received_bytes: u32,
+}
+
+impl TcpHandshake {
+    pub async fn perform(
+        source_port: u16,
+        destination_port: u16,
+        rx: &SAsyncPacketRx,
+        tx: &MAsyncTx<mpsc::Array<UsbDevicePacket>>,
+    ) -> Result<Self, RusbmuxError> {
+        let mut sent_bytes = 0;
+        let mut received_bytes = 0;
+
+        info!(
+            src = source_port,
+            dst = destination_port,
+            "Initiating TCP handshake"
+        );
+
+        let tcp_syn = UsbDevicePacket::builder()
+            .header_tcp(AUTO_SEQ, AUTO_SEQ)
+            .tcp_header(
+                source_port,
+                destination_port,
+                sent_bytes,
+                received_bytes,
+                TcpFlags::SYN,
+            )
+            .build();
+
+        // let tcp_syn_header = tcp_syn.header;
+
+        tx.send(tcp_syn).await?;
+        trace!(src = source_port, dst = destination_port, "Sent SYN");
+
+        let tcp_syn_ack = rx.0.recv().await?;
+
+        let tcp_syn_ack_tcp_hdr =
+            tcp_syn_ack
+                .tcp_hdr
+                .as_ref()
+                .ok_or(RusbmuxError::UnexpectedPacket(
+                    "Expected a packet with a tcp header".to_string(),
+                ))?;
+
+        if !(tcp_syn_ack_tcp_hdr.syn && tcp_syn_ack_tcp_hdr.ack) {
+            tracing::warn!(
+                tcp_hdr = ?tcp_syn_ack_tcp_hdr,
+                payload = ?tcp_syn_ack.payload.encode(),
+                "Received a non SYN-ACK packet"
+            );
+
+            // the reader loop would remove the connection from the router
+            return Err(RusbmuxError::IO(std::io::Error::new(
+                std::io::ErrorKind::ConnectionRefused,
+                "Got a non SYN-ACK",
+            )));
+        }
+
+        debug!(
+            src = source_port,
+            dst = destination_port,
+            "Received SYN-ACK"
+        );
+
+        // let our_send_seq = tcp_syn_header.as_v2().unwrap().send_seq.get();
+        // let device_recv_seq = tcp_syn_ack.header.as_v2().map(|h| h.recv_seq.get());
+        //
+        // debug_assert!(
+        //     device_recv_seq.is_some_and(|seq| seq < our_send_seq),
+        //     "device is behind or out-of-order"
+        // );
+
+        // should be 1 (syn)
+        sent_bytes += tcp_syn_ack_tcp_hdr.acknowledgment_number;
+
+        // I've received 1 byte (syn-ack)
+        received_bytes += 1;
+
+        let tcp_ack = UsbDevicePacket::builder()
+            .header_tcp(AUTO_SEQ, AUTO_SEQ)
+            .tcp_header(
+                source_port,
+                destination_port,
+                sent_bytes,
+                received_bytes,
+                TcpFlags::ACK,
+            )
+            .build();
+
+        tx.send(tcp_ack).await?;
+
+        trace!(src = source_port, dst = destination_port, "Sent ACK");
+
+        info!(
+            src = source_port,
+            dst = destination_port,
+            sent_bytes,
+            received_bytes,
+            "TCP handshake complete"
+        );
+
+        Ok(Self {
+            sent_bytes,
+            received_bytes,
+            device_window_size: tcp_syn_ack_tcp_hdr.window_size,
+            device_received_bytes: tcp_syn_ack_tcp_hdr.acknowledgment_number,
+        })
+    }
+}
 
 #[derive(Debug)]
 pub struct UsbDeviceConn {
@@ -29,8 +149,8 @@ pub struct UsbDeviceConn {
     pub device_last_window_size: AtomicU16,
     pub device_last_received_bytes: AtomicU32,
 
-    pub rx: MAsyncRx<mpmc::Array<UsbDevicePacket>>,
-    pub tx: MAsyncTx<mpmc::Array<UsbDevicePacket>>,
+    pub rx: SAsyncPacketRx,
+    pub tx: MAsyncTx<mpsc::Array<UsbDevicePacket>>,
 
     dropped: AtomicBool,
 }
@@ -59,8 +179,8 @@ impl UsbDeviceConn {
         received_bytes: u32,
         device_last_window_size: u16,
         device_last_received_bytes: u32,
-        rx: MAsyncRx<mpmc::Array<UsbDevicePacket>>,
-        tx: MAsyncTx<mpmc::Array<UsbDevicePacket>>,
+        rx: SAsyncPacketRx,
+        tx: MAsyncTx<mpsc::Array<UsbDevicePacket>>,
     ) -> Arc<Self> {
         debug!(
             src = source_port,
@@ -94,101 +214,27 @@ impl UsbDeviceConn {
         device_router: Weak<PacketRouter>,
         source_port: u16,
         destination_port: u16,
-        rx: MAsyncRx<mpmc::Array<UsbDevicePacket>>,
-        tx: MAsyncTx<mpmc::Array<UsbDevicePacket>>,
+        rx: SAsyncPacketRx,
+        tx: MAsyncTx<mpsc::Array<UsbDevicePacket>>,
     ) -> Result<Arc<Self>, RusbmuxError> {
-        let mut sent_bytes = 0;
-        let mut received_bytes = 0;
+        let handshake = TcpHandshake::perform(source_port, destination_port, &rx, &tx).await?;
 
-        info!(
-            src = source_port,
-            dst = destination_port,
-            "Initiating TCP handshake"
-        );
-
-        let tcp_syn = UsbDevicePacket::builder()
-            .header_tcp(AUTO_SEQ, AUTO_SEQ)
-            .tcp_header(
-                source_port,
-                destination_port,
-                sent_bytes,
-                received_bytes,
-                TcpFlags::SYN,
-            )
-            .build();
-
-        // let tcp_syn_header = tcp_syn.header;
-
-        tx.send(tcp_syn).await?;
-        trace!(src = source_port, dst = destination_port, "Sent SYN");
-
-        let tcp_syn_ack = rx.recv().await?;
-        debug!(
-            src = source_port,
-            dst = destination_port,
-            "Received SYN-ACK"
-        );
-
-        // let our_send_seq = tcp_syn_header.as_v2().unwrap().send_seq.get();
-        // let device_recv_seq = tcp_syn_ack.header.as_v2().map(|h| h.recv_seq.get());
-        //
-        // debug_assert!(
-        //     device_recv_seq.is_some_and(|seq| seq < our_send_seq),
-        //     "device is behind or out-of-order"
-        // );
-
-        let tcp_syn_ack_tcp_hdr =
-            tcp_syn_ack
-                .tcp_hdr
-                .as_ref()
-                .ok_or(RusbmuxError::UnexpectedPacket(
-                    "Expected a packet with a tcp header".to_string(),
-                ))?;
-        // should be 1 (syn)
-        sent_bytes += tcp_syn_ack_tcp_hdr.acknowledgment_number;
-
-        // I've received 1 byte (syn-ack)
-        received_bytes += tcp_syn_ack_tcp_hdr.sequence_number;
-
-        let tcp_ack = UsbDevicePacket::builder()
-            .header_tcp(AUTO_SEQ, AUTO_SEQ)
-            .tcp_header(
-                source_port,
-                destination_port,
-                sent_bytes,
-                received_bytes,
-                TcpFlags::ACK,
-            )
-            .build();
-
-        tx.send(tcp_ack).await?;
-
-        trace!(src = source_port, dst = destination_port, "Sent ACK");
-
-        let last_device_window_size = tcp_syn_ack_tcp_hdr.window_size;
-        let device_received_bytes = tcp_syn_ack_tcp_hdr.acknowledgment_number;
-
-        let sendable_bytes =
-            Self::calc_sendable_bytes(sent_bytes, last_device_window_size, device_received_bytes);
-
-        info!(
-            src = source_port,
-            dst = destination_port,
-            sent_bytes,
-            received_bytes,
-            "TCP handshake complete"
+        let sendable_bytes = Self::calc_sendable_bytes(
+            handshake.sent_bytes,
+            handshake.device_window_size,
+            handshake.device_received_bytes,
         );
 
         Ok(Arc::new(Self {
             device_core: device.core.clone(),
             device_router,
-            sent_bytes: AtomicU32::new(sent_bytes),
-            received_bytes: AtomicU32::new(received_bytes),
+            sent_bytes: AtomicU32::new(handshake.sent_bytes),
+            received_bytes: AtomicU32::new(handshake.received_bytes),
             source_port,
             destination_port,
             sendable_bytes: AtomicUsize::new(sendable_bytes),
-            device_last_window_size: AtomicU16::new(last_device_window_size),
-            device_last_received_bytes: AtomicU32::new(device_received_bytes),
+            device_last_window_size: AtomicU16::new(handshake.device_window_size),
+            device_last_received_bytes: AtomicU32::new(handshake.device_received_bytes),
             rx,
             tx,
             dropped: AtomicBool::new(false),
@@ -197,17 +243,7 @@ impl UsbDeviceConn {
 
     /// you must include the length prefix at the start
     pub async fn send_bytes(&self, value: Bytes) -> Result<(), RusbmuxError> {
-        let packet = UsbDevicePacket::builder()
-            .header_tcp(AUTO_SEQ, AUTO_SEQ)
-            .tcp_header(
-                self.source_port,
-                self.destination_port,
-                self.get_sent_bytes(),
-                self.get_received_bytes(),
-                TcpFlags::ACK,
-            )
-            .payload_bytes(value)
-            .build();
+        let packet = self.build_bytes(value);
 
         self.send_packet(packet).await
     }
@@ -228,7 +264,7 @@ impl UsbDeviceConn {
         self.send_packet(packet).await
     }
 
-    async fn send_packet(&self, packet: UsbDevicePacket) -> Result<(), RusbmuxError> {
+    pub async fn send_packet(&self, packet: UsbDevicePacket) -> Result<(), RusbmuxError> {
         let payload_len = packet.payload.len() as u32;
 
         self.tx.send(packet).await?;
@@ -252,6 +288,7 @@ impl UsbDeviceConn {
         self.set_dropped();
         self.send_rst().await?;
 
+        // TODO: is it even necessary?
         if let Some(router) = self.device_router.upgrade() {
             router.unregister(self.source_port);
         }
@@ -328,18 +365,11 @@ impl UsbDeviceConn {
     }
 
     pub async fn ack(&self) -> Result<(), RusbmuxError> {
-        let tcp_ack = UsbDevicePacket::builder()
-            .header_tcp(AUTO_SEQ, AUTO_SEQ)
-            .tcp_header(
-                self.source_port,
-                self.destination_port,
-                self.get_sent_bytes(),
-                self.get_received_bytes(),
-                TcpFlags::ACK,
-            )
-            .build();
+        let tcp_ack = self.build_flag(TcpFlags::ACK);
 
         self.tx.send(tcp_ack).await?;
+
+        self.update_sendable_bytes();
 
         trace!(
             src = self.source_port,
@@ -350,23 +380,54 @@ impl UsbDeviceConn {
     }
 
     pub async fn recv(&self) -> Result<UsbDevicePacket, RusbmuxError> {
-        let response = self.rx.recv().await?;
+        let response = self.rx.0.recv().await?;
 
-        let recv_bytes = response.payload.len() as u32;
-        let tcp_hdr = response.tcp_hdr.as_ref();
-
-        self.set_received_bytes(tcp_hdr.map_or(recv_bytes, |t| t.sequence_number));
-
-        if let Some(h) = tcp_hdr {
-            self.set_device_last_received_bytes(h.acknowledgment_number);
-            self.set_device_last_window_size(h.window_size);
-        }
+        self.update_states(&response);
 
         self.ack().await?;
 
-        self.update_sendable_bytes();
-
         Ok(response)
+    }
+
+    #[inline]
+    pub fn build_bytes(&self, value: Bytes) -> UsbDevicePacket {
+        UsbDevicePacket::builder()
+            .header_tcp(AUTO_SEQ, AUTO_SEQ)
+            .tcp_header(
+                self.source_port,
+                self.destination_port,
+                self.get_sent_bytes(),
+                self.get_received_bytes(),
+                TcpFlags::ACK,
+            )
+            .payload_bytes(value)
+            .build()
+    }
+
+    #[inline]
+    pub fn build_flag(&self, tcp_flag: TcpFlags) -> UsbDevicePacket {
+        // TODO: can this be pre-built for performance? does it matter?
+        UsbDevicePacket::builder()
+            .header_tcp(AUTO_SEQ, AUTO_SEQ)
+            .tcp_header(
+                self.source_port,
+                self.destination_port,
+                self.get_sent_bytes(),
+                self.get_received_bytes(),
+                tcp_flag,
+            )
+            .build()
+    }
+
+    pub fn update_states(&self, packet: &UsbDevicePacket) {
+        let recv_bytes = packet.payload.len() as u32;
+
+        if let Some(ref tcp_hdr) = packet.tcp_hdr {
+            self.set_received_bytes(tcp_hdr.sequence_number.wrapping_add(recv_bytes));
+
+            self.set_device_last_received_bytes(tcp_hdr.acknowledgment_number);
+            self.set_device_last_window_size(tcp_hdr.window_size);
+        }
     }
 
     pub fn update_sendable_bytes(&self) {
@@ -390,7 +451,7 @@ impl UsbDeviceConn {
         // value
         let device_window_size = (device_window_size as u32) << 8;
 
-        let unacked_bytes = sent_bytes.saturating_sub(device_received_bytes);
+        let unacked_bytes = sent_bytes.wrapping_sub(device_received_bytes);
 
         if device_window_size > unacked_bytes {
             ((device_window_size - unacked_bytes) as usize).min(MAX_PACKET_PAYLOAD_SIZE)
