@@ -34,7 +34,7 @@ jobs:
           submodules: true
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
           disable_annotations: true
@@ -70,7 +70,7 @@ jobs:
           components: clippy
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
           disable_annotations: true
@@ -96,7 +96,7 @@ jobs:
           components: rustfmt
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
           disable_annotations: true
@@ -120,7 +120,7 @@ jobs:
           toolchain: nightly
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
           disable_annotations: true
@@ -147,7 +147,7 @@ jobs:
           toolchain: stable
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
           disable_annotations: true
@@ -186,7 +186,7 @@ jobs:
           key: ${{ runner.os }}-cargo
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
           disable_annotations: true
