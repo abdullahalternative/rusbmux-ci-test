@@ -14,7 +14,7 @@ rust-version = "1.88"
 
 [dependencies]
 plist-macro = "0.1.6"
-plist = "1.10.0"
+plist = "1.10.1"
 
 bytemuck = "1.25.2"
 dashmap = "6.2.1"
