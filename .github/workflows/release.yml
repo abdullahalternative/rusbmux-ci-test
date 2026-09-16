@@ -130,7 +130,7 @@ jobs:
           }
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer-${{ matrix.name }}
           path: windows/dist/rusbmux-*.exe
@@ -261,7 +261,7 @@ jobs:
             esac
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rusbmux-${{ matrix.name }}
           path: out/*
@@ -329,7 +329,7 @@ jobs:
             --install-location / \
             "rusbmux-$VERSION-${{ matrix.arch }}.pkg"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rusbmux-${{ matrix.name }}
           path: rusbmux-*.pkg
