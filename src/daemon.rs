@@ -2,14 +2,14 @@ use crate::error::RusbmuxError;
 use tracing::{debug, error, info, warn};
 
 #[cfg(unix)]
-type Listener = tokio::net::UnixListener;
+pub type Listener = tokio::net::UnixListener;
 #[cfg(unix)]
-const LISTENER_PATH: &str = "/var/run/usbmuxd";
+pub const LISTENER_PATH: &str = "/var/run/usbmuxd";
 
 #[cfg(windows)]
-type Listener = tokio::net::TcpListener;
+pub type Listener = tokio::net::TcpListener;
 #[cfg(windows)]
-const LISTENER_PATH: &str = "127.0.0.1:27015";
+pub const LISTENER_PATH: &str = "127.0.0.1:27015";
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
@@ -50,9 +50,9 @@ fn launchd_listener(name: &str) -> Result<Option<Listener>, RusbmuxError> {
     Ok(Some(Listener::from_std(listener)?))
 }
 
-async fn get_listener() -> Result<Listener, RusbmuxError> {
+async fn get_listener(socket_path: &str) -> Result<Listener, RusbmuxError> {
     #[cfg(windows)]
-    return Ok(Listener::bind(LISTENER_PATH).await?);
+    return Ok(Listener::bind(socket_path).await?);
 
     #[cfg(unix)]
     {
@@ -64,38 +64,40 @@ async fn get_listener() -> Result<Listener, RusbmuxError> {
             }
         }
 
-        Ok(Listener::bind(LISTENER_PATH)?)
+        Ok(Listener::bind(socket_path)?)
     }
 }
 
-pub async fn run() -> Result<(), RusbmuxError> {
+pub async fn run(socket: Option<String>) -> Result<(), RusbmuxError> {
     use crate::{
         handler::create_lockdown_dir,
         watcher::{watch_network_daemon, watch_usb_daemon},
     };
 
+    let socket = socket.unwrap_or(LISTENER_PATH.to_string());
+
     #[cfg(unix)]
     {
-        let socket_path = std::path::Path::new(LISTENER_PATH);
-        if socket_path.exists() {
+        let path = std::path::Path::new(&socket);
+        if path.exists() {
             debug!("Socket file already exists, removing...");
 
-            if let Err(e) = std::fs::remove_file(socket_path) {
-                warn!(err = ?e, "Failed to remove existing socket file");
+            if let Err(err) = std::fs::remove_file(path) {
+                warn!(%err, "Failed to remove existing socket file");
             }
         }
     }
 
-    let listener = get_listener().await?;
-    if let Err(e) = create_lockdown_dir().await {
-        error!(err = ?e, "Failed to create lockdown directory");
+    let listener = get_listener(&socket).await?;
+    if let Err(err) = create_lockdown_dir().await {
+        error!(%err, "Failed to create lockdown directory");
     }
 
     #[cfg(unix)]
     {
         debug!("Setting the `ReuseAddr` socket option");
-        if let Err(e) = rustix::net::sockopt::set_socket_reuseaddr(&listener, true) {
-            warn!(err = ?e, "Failed to set ReuseAddr socket option");
+        if let Err(err) = rustix::net::sockopt::set_socket_reuseaddr(&listener, true) {
+            warn!(%err, "Failed to set ReuseAddr socket option");
         }
 
         // macos shuts the entire process if there's something wrong when reading or writing to the
@@ -103,8 +105,8 @@ pub async fn run() -> Result<(), RusbmuxError> {
         #[cfg(target_os = "macos")]
         {
             debug!("Setting the `Nosigpipe` socket option");
-            if let Err(e) = rustix::net::sockopt::set_socket_nosigpipe(&listener, true) {
-                warn!(err = ?e, "Failed to set Nosigpipe socket option");
+            if let Err(err) = rustix::net::sockopt::set_socket_nosigpipe(&listener, true) {
+                warn!(%err, "Failed to set Nosigpipe socket option");
             }
         }
     }
@@ -113,10 +115,8 @@ pub async fn run() -> Result<(), RusbmuxError> {
     {
         use std::os::unix::fs::PermissionsExt;
         debug!("Setting the socket permissions to 666");
-        if let Err(e) =
-            std::fs::set_permissions(LISTENER_PATH, std::fs::Permissions::from_mode(0o666))
-        {
-            warn!(err = ?e, "Failed to set socket permissions");
+        if let Err(err) = std::fs::set_permissions(socket, std::fs::Permissions::from_mode(0o666)) {
+            warn!(%err, "Failed to set socket permissions");
         }
     }
 
@@ -164,29 +164,29 @@ pub async fn wait_shutdown() {
     {
         let mut shutdown = match tokio::signal::windows::ctrl_shutdown() {
             Ok(s) => s,
-            Err(e) => {
-                warn!(err = ?e, "Failed to register ctrl_shutdown handler");
+            Err(err) => {
+                warn!(%err, "Failed to register ctrl_shutdown handler");
                 return;
             }
         };
         let mut cbreak = match tokio::signal::windows::ctrl_break() {
             Ok(s) => s,
-            Err(e) => {
-                warn!(err = ?e, "Failed to register ctrl_break handler");
+            Err(err) => {
+                warn!(%err, "Failed to register ctrl_break handler");
                 return;
             }
         };
         let mut close = match tokio::signal::windows::ctrl_close() {
             Ok(s) => s,
-            Err(e) => {
-                warn!(err = ?e, "Failed to register ctrl_close handler");
+            Err(err) => {
+                warn!(%err, "Failed to register ctrl_close handler");
                 return;
             }
         };
         let mut logoff = match tokio::signal::windows::ctrl_logoff() {
             Ok(s) => s,
-            Err(e) => {
-                warn!(err = ?e, "Failed to register ctrl_logoff handler");
+            Err(err) => {
+                warn!(%err, "Failed to register ctrl_logoff handler");
                 return;
             }
         };
@@ -211,8 +211,8 @@ pub async fn wait_shutdown() {
 
 pub async fn cleanup() {
     for device in &*crate::watcher::CONNECTED_DEVICES {
-        if let Err(e) = device.shutdown().await {
-            error!(id = device.id(), ?e, "Failed to shutdown device");
+        if let Err(err) = device.shutdown().await {
+            error!(id = device.id(), %err, "Failed to shutdown device");
         }
     }
 }
@@ -228,7 +228,7 @@ pub async fn start_accepting(listener: Listener) {
                     handler::handle_client(Box::new(socket)).await;
                 });
             }
-            Err(e) => error!("Unable to accept the unix connection: {e:?}"),
+            Err(err) => error!("Unable to accept the unix connection: {err:?}"),
         }
     }
 }
