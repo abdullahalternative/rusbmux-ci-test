@@ -199,7 +199,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v16
 
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v9
+        uses: DeterminateSystems/magic-nix-cache-action@v15
 
       - name: flake check
         run: nix flake check
