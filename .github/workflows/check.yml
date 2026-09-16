@@ -43,6 +43,9 @@ jobs:
           components: rustfmt
 
       - name: cargo fmt --check
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         run: cargo fmt --check
   clippy:
     runs-on: ubuntu-latest
@@ -71,6 +74,9 @@ jobs:
 
       - name: cargo clippy
         uses: giraffate/clippy-action@13b9d32482f25d29ead141b79e7e04e7900281e0 # tag=v1.0.1
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         with:
           reporter: "github-pr-check"
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -93,6 +99,9 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: cargo-semver-checks
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # tag=v2.9
   doc:
     # run docs generation on nightly rather than stable. This enables features like
@@ -117,6 +126,9 @@ jobs:
         uses: dtolnay/install@982daea0f5d846abc3c83e01a6a1d73c040047c1 # branch=cargo-docs-rs
 
       - name: cargo docs-rs
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         run: cargo docs-rs
 
   hack:
@@ -145,6 +157,9 @@ jobs:
       # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
       # --feature-powerset runs for every combination of features
       - name: cargo hack
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         run: cargo hack --feature-powerset check --at-least-one-of rusb,nusb
   msrv:
     # check that we can build using the minimal rust version that is specified by this crate
@@ -174,6 +189,9 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: cargo +${{ matrix.msrv }} check
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         run: cargo check
   flake:
     name: Check flake
