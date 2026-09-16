@@ -73,7 +73,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
 
@@ -198,7 +198,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
 
@@ -289,7 +289,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: "v0.10.0"
 
