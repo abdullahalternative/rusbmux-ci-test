@@ -35,9 +35,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
-          disable_annotations: true
 
       - name: Install stable
         uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # branch=master
@@ -71,9 +68,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
-          disable_annotations: true
 
       - name: cargo clippy
         uses: giraffate/clippy-action@13b9d32482f25d29ead141b79e7e04e7900281e0 # tag=v1.0.1
@@ -97,9 +91,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
-          disable_annotations: true
 
       - name: cargo-semver-checks
         uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # tag=v2.9
@@ -121,9 +112,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
-          disable_annotations: true
 
       - name: Install cargo-docs-rs
         uses: dtolnay/install@982daea0f5d846abc3c83e01a6a1d73c040047c1 # branch=cargo-docs-rs
@@ -148,9 +136,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
-          disable_annotations: true
 
       - name: cargo install cargo-hack
         uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # tag=v2.85.4
@@ -187,9 +172,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
-          disable_annotations: true
 
       - name: cargo +${{ matrix.msrv }} check
         run: cargo check
