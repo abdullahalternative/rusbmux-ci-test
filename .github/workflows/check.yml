@@ -110,6 +110,12 @@ jobs:
         with:
           tool: cargo-cross
 
+      - name: Cache cargo-cross
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/cross
+          key: cargo-cross-${{ runner.os }}-${{ matrix.target }}
+
       - name: Setup cross environment
         run: |
           cargo cross setup \
