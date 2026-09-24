@@ -106,14 +106,16 @@ jobs:
         with:
           tool: cargo-cross
 
-      - name: Set cross compiler directory
-        run: echo "CROSS_COMPILER_DIR=$HOME/.cargo/cross" >> "$GITHUB_ENV"
-
-      - name: Cache cargo-cross
-        uses: actions/cache@v6
-        with:
-          path: ~/.cargo/cross
-          key: cargo-cross-${{ runner.os }}-${{ matrix.target }}
+      ## caching the cross files is as slow as letting it download
+      ##
+      # - name: Set cross compiler directory
+      #   run: echo "CROSS_COMPILER_DIR=$HOME/.cargo/cross" >> "$GITHUB_ENV"
+      #
+      # - name: Cache cargo-cross
+      #   uses: actions/cache@v6
+      #   with:
+      #     path: ~/.cargo/cross
+      #     key: cargo-cross-${{ runner.os }}-${{ matrix.target }}
 
       - name: Setup cross environment
         run: |
