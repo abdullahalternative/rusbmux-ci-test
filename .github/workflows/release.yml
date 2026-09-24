@@ -25,6 +25,7 @@ jobs:
         id: version
         env:
           FORCE_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
+          GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/version_check.sh
 
   # Windows  –  rusbmux + USB driver + Inno Setup
