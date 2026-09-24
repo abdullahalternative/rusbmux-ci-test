@@ -41,7 +41,7 @@ fn launchd_listener(name: &str) -> Result<Option<Listener>, RusbmuxError> {
         return Ok(None);
     }
 
-    let fd2: RawFd = unsafe { *fds };
+    let fd: RawFd = unsafe { *fds };
 
     let listener = unsafe { StdUnixListener::from_raw_fd(fd) };
 
