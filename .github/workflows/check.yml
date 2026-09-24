@@ -27,7 +27,7 @@ name: check
 jobs:
   fmt:
     runs-on: ubuntu-latest
-    name: stable / fmt
+    name: fmt
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
         with:
@@ -44,7 +44,7 @@ jobs:
 
   clippy:
     runs-on: ubuntu-latest
-    name: ${{ matrix.toolchain }} / clippy
+    name: clippy / ${{ matrix.toolchain }}
     permissions:
       contents: read
       checks: write
@@ -158,7 +158,7 @@ jobs:
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
     # API be documented as only available in some specific platforms.
     runs-on: ubuntu-latest
-    name: nightly / doc
+    name: doc / nightly
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
         with:
@@ -185,7 +185,7 @@ jobs:
     # cargo-hack checks combinations of feature flags to ensure that features are all additive
     # which is required for feature unification
     runs-on: ubuntu-latest
-    name: ubuntu / stable / features
+    name: feature combinations
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
         with:
@@ -219,7 +219,7 @@ jobs:
     strategy:
       matrix:
         msrv: ["1.88"]
-    name: ubuntu / ${{ matrix.msrv }}
+    name: MSRV / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
         with:
@@ -244,7 +244,7 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo check
   flake:
-    name: Check flake
+    name: flake
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
