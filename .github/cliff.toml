@@ -117,5 +117,5 @@ topo_order_commits = true
 sort_commits = "newest"
 
 [remote.github]
-owner = "abdullah-albanna"
-repo = "rusbmux"
+owner = "abdullahalternative"
+repo = "rusbmux-ci-test"
