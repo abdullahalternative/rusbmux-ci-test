@@ -116,11 +116,27 @@ jobs:
           path: ~/.cargo/cross
           key: cargo-cross-${{ runner.os }}-${{ matrix.target }}
 
+      - name: Inspect cargo-cross cache
+        run: |
+          echo "=== ~/.cargo/cross ==="
+          ls -lah ~/.cargo/cross || true
+          echo
+          echo "=== files ==="
+          find ~/.cargo/cross -maxdepth 3 -type f | head -100 || true
+
       - name: Setup cross environment
         run: |
           cargo cross setup \
             --target "${{ matrix.target }}" \
             --format bash >> "$GITHUB_ENV"
+
+      - name: Inspect cargo-cross cache
+        run: |
+          echo "=== ~/.cargo/cross ==="
+          ls -lah ~/.cargo/cross || true
+          echo
+          echo "=== files ==="
+          find ~/.cargo/cross -maxdepth 3 -type f | head -100 || true
 
       - name: Cargo check
         env:
