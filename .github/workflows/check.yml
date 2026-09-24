@@ -95,20 +95,35 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true
+
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
 
+      - name: cargo install cargo-cross
+        uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # tag=v2.85.4
+        with:
+          tool: cargo-cross
+
+      - name: Setup cross environment
+        run: |
+          cargo cross setup \
+            --target "${{ matrix.target }}" \
+            --format bash >> "$GITHUB_ENV"
+
       - name: Cargo check
-        uses: zijiren233/cargo-cross@v1
         env:
           SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-        with:
-          command: check
-          targets: ${{ matrix.target }}
-          all-features: true
+          RUSTC_WRAPPER: sccache
+        run: |
+          cargo check \
+            --target "${{ matrix.target }}" \
+            --all-features
 
   semver:
     runs-on: ubuntu-latest
