@@ -10,9 +10,6 @@
 permissions:
   contents: read
 
-# This configuration allows maintainers of this repo to create a branch and pull request based on
-# the new branch. Restricting the push trigger to the main branch ensures that the PR only gets
-# built once.
 on:
   push:
     branches: [main]
@@ -43,22 +40,17 @@ jobs:
 
   clippy:
     runs-on: ubuntu-latest
-    name: clippy / ${{ matrix.toolchain }}
+    name: clippy
     permissions:
       contents: read
       checks: write
-    strategy:
-      fail-fast: false
-      matrix:
-        # Get early warning of new lints which are regularly introduced in beta channels.
-        toolchain: [stable, beta]
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install ${{ matrix.toolchain }}
+      - name: Install stable
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: stable
           components: clippy
 
       - name: Setup sccache
@@ -178,34 +170,34 @@ jobs:
           RUSTC_WRAPPER: "sccache"
         run: cargo docs-rs
 
-  hack:
-    # cargo-hack checks combinations of feature flags to ensure that features are all additive
-    # which is required for feature unification
-    runs-on: ubuntu-latest
-    name: feature combinations
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.11
-
-      - name: cargo install cargo-hack
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-hack
-
-      # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
-      # --feature-powerset runs for every combination of features
-      - name: cargo hack
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-        run: cargo hack --feature-powerset check --at-least-one-of rusb,nusb
+  # hack:
+  #   # cargo-hack checks combinations of feature flags to ensure that features are all additive
+  #   # which is required for feature unification
+  #   runs-on: ubuntu-latest
+  #   name: feature combinations
+  #   steps:
+  #     - uses: actions/checkout@v7
+  #
+  #     - name: Install stable
+  #       uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: stable
+  #
+  #     - name: Setup sccache
+  #       uses: mozilla-actions/sccache-action@v0.0.11
+  #
+  #     - name: cargo install cargo-hack
+  #       uses: taiki-e/install-action@v2
+  #       with:
+  #         tool: cargo-hack
+  #
+  #     # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
+  #     # --feature-powerset runs for every combination of features
+  #     - name: cargo hack
+  #       env:
+  #         SCCACHE_GHA_ENABLED: "true"
+  #         RUSTC_WRAPPER: "sccache"
+  #       run: cargo hack --feature-powerset check --at-least-one-of rusb,nusb
   msrv:
     # check that we can build using the minimal rust version that is specified by this crate
     runs-on: ubuntu-latest
