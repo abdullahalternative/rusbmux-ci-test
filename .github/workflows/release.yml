@@ -2,52 +2,35 @@ name: Build and Release
 
 on:
   workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Release type"
-        required: true
-        type: choice
-        options:
-          - release
-          - pre-release
-        default: pre-release
-      os:
-        description: "Target OS"
-        required: false
-        type: choice
-        options:
-          - all
-          - windows
-          - linux
-          - macos
-        default: all
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # check whether the version in Cargo.toml has
-  # changed (push) or if this is a manual run.
+  # compare the Cargo.toml version against the latest GitHub release tag to
+  # decide whether to build and release (workflow_dispatch always releases).
   version-check:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.version.outputs.should_release }}
 
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 1
 
-      - name: Extract version
+      - name: Extract version & check against latest release
         id: version
-        run: |
-          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        env:
+          FORCE_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
+        run: bash .github/scripts/version_check.sh
 
   # Windows  –  rusbmux + USB driver + Inno Setup
   build-windows:
     needs: version-check
-    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'windows' }}
+    if: needs.version-check.outputs.should_release == 'true'
     strategy:
       matrix:
         include:
@@ -74,8 +57,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
 
       - name: Install needed crates
         uses: taiki-e/install-action@v2
@@ -96,22 +77,22 @@ jobs:
         shell: pwsh
         run: |
           Get-Content THIRD_PARTY_LICENSES | Set-Content THIRD_PARTY_LICENSES_COMBINED -Encoding utf8
-          Add-Content THIRD_PARTY_LICENSES_COMBINED "`n`n================================================" -Encoding utf8
-          Add-Content THIRD_PARTY_LICENSES_COMBINED "================== Windows USB Driver Dependencies ==================" -Encoding utf8
-          Add-Content THIRD_PARTY_LICENSES_COMBINED "================================================`n" -Encoding utf8
+          Add-Content THIRD_PARTY_LICENSES_COMBINED "`n`n----------------------------------------------------------------" -Encoding utf8
+          Add-Content THIRD_PARTY_LICENSES_COMBINED "-------------------- Windows USB Driver Dependencies --------------------" -Encoding utf8
+          Add-Content THIRD_PARTY_LICENSES_COMBINED "---------------------------------------------------------------`n" -Encoding utf8
           Get-Content windows/rusbmux-usb-win-driver/THIRD_PARTY_LICENSES_USB | Add-Content THIRD_PARTY_LICENSES_COMBINED -Encoding utf8
           Move-Item THIRD_PARTY_LICENSES_COMBINED THIRD_PARTY_LICENSES -Force
 
       - name: Build rusbmux
         env:
-          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
+          RUSTFLAGS: "-C linker=lld-link"
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --no-default-features -F rusb,rusb-vendored,bin
 
       - name: Build USB driver
         env:
-          RUSTFLAGS: "-C link-arg=/USECL:lld-link"
+          RUSTFLAGS: "-C linker=lld-link"
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
         run: cargo build --release --manifest-path windows/rusbmux-usb-win-driver/Cargo.toml
@@ -138,7 +119,7 @@ jobs:
   # Linux  –  glibc + musl (fully static)
   build-linux:
     needs: version-check
-    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'linux' }}
+    if: needs.version-check.outputs.should_release == 'true'
     strategy:
       matrix:
         include:
@@ -199,8 +180,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
 
       - name: Install needed crates
         uses: taiki-e/install-action@v2
@@ -268,8 +247,8 @@ jobs:
 
   # macOS  –  Intel  +  Apple Silicon
   build-macos:
-    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'macos' }}
     needs: version-check
+    if: needs.version-check.outputs.should_release == 'true'
     strategy:
       matrix:
         include:
@@ -290,8 +269,6 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: "v0.10.0"
 
       - name: Install needed crates
         uses: taiki-e/install-action@v2
@@ -374,6 +351,8 @@ jobs:
           BASE="https://github.com/$REPO/releases/download/$TAG"
           VER="${TAG#v}"
 
+          # TODO: can this be automatic?
+
           DEB_X86_64="$BASE/rusbmux_${VER}_amd64.deb"
           DEB_X86_64_STATIC="$BASE/rusbmux_${VER}_amd64-musl.deb"
 
@@ -436,5 +415,15 @@ jobs:
           name: v${{ needs.version-check.outputs.version }}
           body_path: release_body.md
           draft: false
-          prerelease: ${{ github.event.inputs.release_type == 'pre-release' }}
+          prerelease: false
           files: artifacts/**/*
+
+  # publish:
+  #   needs:
+  #     - version-check
+  #     - create-release
+  #
+  #   uses: ./.github/workflows/publish.yml
+  #   with:
+  #     version: ${{ needs.version-check.outputs.version }}
+  #   secrets: inherit

@@ -124,9 +124,23 @@ jobs:
             --target "${{ matrix.target }}" \
             --all-features
 
+  version-gate:
+    runs-on: ubuntu-latest
+    name: version-gate
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare against latest GitHub release
+        id: check
+        run: bash .github/scripts/version_check.sh
+
   semver:
     runs-on: ubuntu-latest
     name: semver
+    needs: version-gate
+    if: needs.version-gate.outputs.should_release == 'true'
     steps:
       - uses: actions/checkout@v7
 
@@ -243,3 +257,25 @@ jobs:
 
       - name: flake check
         run: nix flake check
+
+  cd:
+    needs:
+      - fmt
+      - clippy
+      - check
+      - semver
+      - doc
+      - msrv
+      - flake
+      - version-gate
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.version-gate.outputs.should_release == 'true'
+
+    permissions:
+      contents: write
+
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
