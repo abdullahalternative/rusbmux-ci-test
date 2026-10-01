@@ -27,7 +27,7 @@ jobs:
           cat rusbmux-bin/PKGBUILD
 
       - name: Publish AUR package
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
         with:
           pkgname: rusbmux-bin
           pkgbuild: ./rusbmux-bin/PKGBUILD
